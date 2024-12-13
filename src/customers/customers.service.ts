@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateCustomerDto } from './dto';
+import { Customer } from '@prisma/client';
 
 @Injectable()
 export class CustomersService {
@@ -38,6 +39,21 @@ export class CustomersService {
           full_name: fullName,
           email,
           password
+        }
+      });
+  
+      return customer;
+    } catch (error) {
+      this.logger.error(error.message);
+      throw new Error(error?.message || 'Something went wrong');
+    }
+  }
+
+  async getCustomerByPhone(phone: string): Promise<any> {
+    try {
+      const customer = await this.prismaService.customer.findUnique({
+        where: {
+          phone
         }
       });
   

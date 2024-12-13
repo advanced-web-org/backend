@@ -1,7 +1,7 @@
 import { Body, Controller, Logger, Post, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { RegisterCustomerDto } from './dto';
-import { response } from 'express';
+import { LoginDto, RegisterCustomerDto } from './dto';
+import e, { response } from 'express';
 
 @Controller('auth')
 export class AuthController {
@@ -11,19 +11,12 @@ export class AuthController {
 
   @Post('register_customer')
   async registerCustomer(@Body() body: RegisterCustomerDto, @Res() response: any) {
-    try {
-      return await this.authService.registerCustomer(body);
-    } catch (error) {
-      return response.status(400).json({
-        status: 'error',
-        message: error.message
-      });
-    }
+    return this.authService.registerCustomer(body);
   }
 
-  @Post('signin')
-  signin(@Body() body: any) {
-    // return this.authService.signin(body);
+  @Post('login')
+  signin(@Body() body: LoginDto) {
+    return this.authService.login(body);
   }
 
   @Get('me')
