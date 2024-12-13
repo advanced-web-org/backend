@@ -1,0 +1,182 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum EncryptMethod {
+  RSA
+  PGP
+}
+
+enum StaffRole {
+  admin
+  employee
+}
+
+enum TransType {
+  transaction
+  deposit
+}
+
+model Customer {
+  customer_id    Int             @id @default(autoincrement())
+  full_name      String?
+  email          String?
+  phone          String?         @unique
+  password       String?
+  refresh_token  String?
+
+  // Relations
+  accounts       Account[]
+  beneficiaries  Beneficiary[]
+  debtsCreditor  Debt[]          @relation("debtsCreditor")
+  debtsDebtor    Debt[]          @relation("debtsDebtor")
+  debtDeletions  DebtDeletion[]
+
+  @@map("customers")
+}
+
+model Account {
+  account_id      Int      @id @default(autoincrement())
+  customer_id     Int
+  account_number  String   @unique
+  account_balance Decimal? @default(0.00) @db.Decimal(15, 2)
+
+  // Relations
+  customer        Customer @relation(fields: [customer_id], references: [customer_id])
+
+  @@map("accounts")
+}
+
+model Bank {
+  bank_id        Int            @id @default(autoincrement())
+  bank_name      String?
+  public_key     String?
+  encrypt_method EncryptMethod?
+
+  // Relations
+  beneficiaries     Beneficiary[]
+  transactionsFrom  Transaction[] @relation("from_bank_id")
+  transactionsTo    Transaction[] @relation("to_bank_id")
+
+  @@map("banks")
+}
+
+model Beneficiary {
+  beneficiary_id Int      @default(autoincrement())
+  customer_id    Int
+  bank_id        Int
+  account_number String
+  nickname       String?
+
+  // Relations
+  customer       Customer @relation(fields: [customer_id], references: [customer_id])
+  bank           Bank     @relation(fields: [bank_id], references: [bank_id])
+
+  @@id([customer_id, bank_id, account_number])
+  @@map("beneficiaries")
+}
+
+model Staff {
+  staff_id  Int       @id @default(autoincrement())
+  full_name String?
+  role      StaffRole?
+  username  String?   @unique
+  password  String?
+
+  // Relations
+  deposits  Deposit[]
+
+  @@map("staffs")
+}
+
+model Transaction {
+  transaction_id      Int         @id @default(autoincrement())
+  from_bank_id        Int?
+  from_account_number String?
+  to_bank_id          Int?
+  to_account_number   String?
+  transaction_type    TransType?
+  transaction_amount  Decimal     @db.Decimal(15, 2)
+  transaction_message String?
+  transaction_date    DateTime?   @default(now())
+  fee_payer           String?
+  fee_amount          Decimal?    @default(0.00) @db.Decimal(15, 2)
+  e_signal            String?
+
+  // Relations
+  from_bank           Bank?        @relation("from_bank_id", fields: [from_bank_id], references: [bank_id])
+  to_bank             Bank?        @relation("to_bank_id", fields: [to_bank_id], references: [bank_id])
+
+  deposits            Deposit[]
+  debtPayments        DebtPayment[]
+
+  @@map("transactions")
+}
+
+model Deposit {
+  deposit_id     Int          @default(autoincrement())
+  employee_id    Int
+  transaction_id Int
+
+  // Relations
+  employee       Staff        @relation(fields: [employee_id], references: [staff_id])
+  transaction    Transaction  @relation(fields: [transaction_id], references: [transaction_id])
+
+  @@id([employee_id, transaction_id])
+  @@map("deposits")
+}
+
+model Debt {
+  debt_id       Int      @id @default(autoincrement())
+  creditor_id   Int
+  debtor_id     Int
+  debt_amount   Decimal  @db.Decimal(15,2)
+  debt_message  String?
+  status        String?
+
+  // Relations
+  creditor      Customer     @relation("debtsCreditor", fields: [creditor_id], references: [customer_id])
+  debtor        Customer     @relation("debtsDebtor", fields: [debtor_id], references: [customer_id])
+  debtDeletion  DebtDeletion?
+  debtPayment   DebtPayment?
+
+  @@map("debts")
+}
+
+model DebtDeletion {
+  deletion_id    Int     @default(autoincrement())
+  debt_id        Int
+  deleter_id     Int
+  delete_message String?
+
+  // Relations
+  debt           Debt     @relation(fields: [debt_id], references: [debt_id])
+  deleter        Customer @relation(fields: [deleter_id], references: [customer_id])
+
+  @@id([debt_id])
+  @@map("debt_deletions")
+}
+
+model DebtPayment {
+  payment_id     Int @default(autoincrement())
+  debt_id        Int
+  transaction_id Int
+
+  // Relations
+  debt           Debt         @relation(fields: [debt_id], references: [debt_id])
+  transaction    Transaction  @relation(fields: [transaction_id], references: [transaction_id])
+
+  @@id([debt_id])
+  @@map("debt_payments")
+}
