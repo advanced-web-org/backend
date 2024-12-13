@@ -1,32 +1,51 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { RegisterCustomerDto } from './dto';
+import { CustomersService } from 'src/customers/customers.service';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-  me() {
-    return {
-      fullname: 'John Doe',
-      email: 'quancodon@gmail.com',
-      phone: '0123456789',
-      role: 'user',
-      access_token: 'abc123xyz',
-    };
-    throw new Error('Method not implemented.');
+  private readonly logger: Logger = new Logger(AuthService.name);
+
+  constructor(
+    private readonly customersService: CustomersService
+  ) { }
+
+  hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 10);
   }
 
-  signin(body: any) {
-    return {
-      fullname: 'John Doe',
-      email: 'quancodon@gmail.com',
-      phone: '0123456789',
-      role: 'user',
-      access_token: 'abc123xyz',
-    };
-  }
+  async registerCustomer(payload: RegisterCustomerDto) {
+    const { phone, fullName, email, password } = payload;
+    try {
+      const isCustomerExist = await this.customersService.isCustomerExist(phone);
+      if (isCustomerExist) {
+        throw new Error('Phone number already registered');
+      }
+  
+      const hashedPassword = await this.hashPassword(password);
+  
+      const customer = await this.customersService.createCustomer({
+        phone,
+        fullName,
+        email,
+        password: hashedPassword
+      });
 
-  signup(body: any) {
-    return {
-      accessToken: 'abc123xyz',
-    };
-    throw new Error('Method not implemented.');
+      if (!customer) {
+        throw new Error('Failed to register customer');
+      }
+
+      return {
+        message: 'Customer registered successfully',
+        data: {
+          phone: customer.phone,
+          fullName: customer.full_name,
+          email: customer.email
+        }
+      }
+    } catch (error) {
+      throw new Error(error?.message || 'Something went wrong');
+    }
   }
 }
