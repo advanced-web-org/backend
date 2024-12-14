@@ -3,6 +3,7 @@ import { LoginDto, RegisterCustomerDto } from './dto';
 import { CustomersService } from 'src/customers/customers.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { TokenPayload } from './interfaces';
 
 @Injectable()
 export class AuthService {
@@ -51,7 +52,7 @@ export class AuthService {
     }
   }
 
-  async login(payload: LoginDto) {
+  async validateCustomer(payload: LoginDto) {
     const { username, password } = payload;
 
     const customer = await this.customersService.getCustomerByPhone(username);
@@ -64,7 +65,22 @@ export class AuthService {
       throw new UnauthorizedException('The username or password is incorrect');
     }
 
-    const token = await this.generateToken({ phone: customer.phone });
+    return {
+      phone: customer.phone,
+      fullName: customer.full_name,
+      email: customer.email
+    }
+  }
+
+  async login(payload: LoginDto) {
+    const { username } = payload;
+    const customer = await this.customersService.getCustomerByPhone(username);
+
+    const tokenPayload: TokenPayload = {
+      phone: customer.phone
+    };
+
+    const token = await this.generateToken(tokenPayload);
 
     return {
       message: 'Login successfully',
@@ -77,7 +93,7 @@ export class AuthService {
     }
   }
 
-  async generateToken(payload: any) {
+  async generateToken(payload: TokenPayload) {
     const accessToken = this.jwtService.sign(payload, { expiresIn: '1d' });
     return {
       accessToken
