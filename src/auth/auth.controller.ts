@@ -1,6 +1,6 @@
 import { Body, Controller, Logger, Post, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterCustomerDto } from './dto';
+import { LoginDto, RefreshTokenDto, RegisterCustomerDto } from './dto';
 import { LocalAuthGuard } from './guards/local.guard';
 
 @Controller('auth')
@@ -20,8 +20,8 @@ export class AuthController {
     return this.authService.login(body);
   }
 
-  @Get('me')
-  me() {
-    return this.authService.me();
+  @Post('refresh_token')
+  async refreshToken(@Body() body: RefreshTokenDto) {
+    return this.authService.refreshToken(body);
   }
 }

@@ -1,9 +1,10 @@
 import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import { LoginDto, RegisterCustomerDto } from './dto';
+import { LoginDto, RefreshTokenDto, RegisterCustomerDto } from './dto';
 import { CustomersService } from 'src/customers/customers.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { TokenPayload } from './interfaces';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class AuthService {
@@ -82,6 +83,8 @@ export class AuthService {
 
     const token = await this.generateToken(tokenPayload);
 
+    await this.updateRefreshToken(customer.phone, token.refreshToken);
+
     return {
       message: 'Login successfully',
       data: {
@@ -94,9 +97,50 @@ export class AuthService {
   }
 
   async generateToken(payload: TokenPayload) {
-    const accessToken = this.jwtService.sign(payload, { expiresIn: '1d' });
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(
+        payload,
+        {
+          secret: 'JWT_SECRET_KEY',
+          expiresIn: '1h'
+        }
+      ),
+      uuidv4()
+    ])
     return {
-      accessToken
+      accessToken,
+      refreshToken
     }
+  }
+
+  async refreshToken(payload: RefreshTokenDto) {
+    const { username, refreshToken } = payload;
+    const customer = await this.customersService.getCustomerByPhone(username);
+
+    if (customer.refresh_token != refreshToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const tokenPayload: TokenPayload = {
+      phone: customer.phone
+    };
+
+    const token = await this.generateToken(tokenPayload);
+
+    await this.updateRefreshToken(customer.phone, token.refreshToken);
+
+    return {
+      message: 'Refresh token successfully',
+      data: {
+        phone: customer.phone,
+        fullName: customer.full_name,
+        email: customer.email,
+        ...token
+      }
+    }
+  }
+
+  async updateRefreshToken(phone: string, refreshToken: string) {
+    await this.customersService.updateCustomer(phone, { refresh_token: refreshToken });
   }
 }
