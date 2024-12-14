@@ -7,9 +7,11 @@ import { ConfigModule } from '@nestjs/config';
 import { QueryTestingService } from './query_testing/query_testing.service';
 import { QueryTestingController } from './query_testing/query_testing.controller';
 import { PrismaService } from './prisma.service';
+import { TransactionModule } from './transaction/transaction.module';
+import { DepositModule } from './deposit/deposit.module';
 
 @Module({
-  imports: [AuthModule, UsersModule, ConfigModule.forRoot()],
+  imports: [AuthModule, UsersModule, ConfigModule.forRoot(), TransactionModule, DepositModule],
   controllers: [AppController, QueryTestingController],
   providers: [AppService, QueryTestingService, PrismaService],
 })
