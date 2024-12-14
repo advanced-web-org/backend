@@ -144,6 +144,8 @@ model Debt {
   debt_amount   Decimal  @db.Decimal(15,2)
   debt_message  String?
   status        String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime? @updatedAt
 
   // Relations
   creditor      Customer     @relation("debtsCreditor", fields: [creditor_id], references: [customer_id])
