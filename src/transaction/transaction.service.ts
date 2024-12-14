@@ -9,14 +9,9 @@ export class TransactionService {
   constructor(private prisma: PrismaService) {}
 
   async create(createTransactionDto: CreateTransactionDto) {
-    const { transaction_type, ...rest } = createTransactionDto;
-
-    const validTransactionType = transaction_type as trans_type;
-  
     return await this.prisma.transaction.create({
       data: {
-        ...rest,
-        transaction_type: validTransactionType,
+        ...createTransactionDto,
         transaction_amount: new Prisma.Decimal(createTransactionDto.transaction_amount),
         fee_amount: new Prisma.Decimal(createTransactionDto.fee_amount),
       },

@@ -3,13 +3,13 @@ import { DepositService } from './deposit.service';
 import { CreateDepositDto } from './dto/create-deposit.dto';
 import { UpdateDepositDto } from './dto/update-deposit.dto';
 
-@Controller('deposit')
+@Controller('deposits')
 export class DepositController {
   constructor(private readonly depositService: DepositService) {}
 
   @Post()
-  create(@Body() createDepositDto: CreateDepositDto) {
-    return this.depositService.create(createDepositDto);
+  async create(@Body() createDepositDto: CreateDepositDto) {
+    return await this.depositService.create(createDepositDto);
   }
 
   @Get()

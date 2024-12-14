@@ -17,32 +17,32 @@ export class TransactionController {
   constructor(private readonly transactionService: TransactionService) {}
 
   @Post()
-  create(@Body() createTransactionDto: CreateTransactionDto) {
-    return this.transactionService.create(createTransactionDto);
+  async create(@Body() createTransactionDto: CreateTransactionDto) {
+    return await this.transactionService.create(createTransactionDto);
   }
 
   @Get()
-  findAllByCustomer(@Query('type') type: string = 'all') {
+  async findAllByCustomer(@Query('type') type: string = 'all') {
     // get the bankId and accountNumber from the auth token
     const bankId = 1;
     const accountNumber = 'A12345';
 
     const typeMethodMap: Record<string, () => any> = {
-      received: () =>
-        this.transactionService.findReceived(bankId, accountNumber),
+      received: async () =>
+        await this.transactionService.findReceived(bankId, accountNumber),
       sent: () => this.transactionService.findSent(bankId, accountNumber),
-      'debt-paid': () =>
-        this.transactionService.findDebtPaid(bankId, accountNumber),
+      'debt-paid': async () =>
+        await this.transactionService.findDebtPaid(bankId, accountNumber),
     };
 
     return (
       typeMethodMap[type]?.() ||
-      this.transactionService.findAll(bankId, accountNumber)
+      await this.transactionService.findAll(bankId, accountNumber)
     );
   }
 
   @Get('/external')
-  findAllExternal(
+  async findAllExternal(
     @Query('startDate') startDate: string = '',
     @Query('endDate') endDate: string = '',
     @Query('externalBankId') externalBankId: string = '',
@@ -50,7 +50,7 @@ export class TransactionController {
     // get the bankId from admin auth token
     const bankId = 1;
 
-    return this.transactionService.findExternal(
+    return await this.transactionService.findExternal(
       bankId,
       startDate,
       endDate,
@@ -59,11 +59,11 @@ export class TransactionController {
   }
 
   @Get('/external/balance')
-  findExternalBalance(@Query('externalBankId') externalBankId: string = '') {
+  async findExternalBalance(@Query('externalBankId') externalBankId: string = '') {
     // get the bankId from admin auth token
     const bankId = 1;
 
-    return this.transactionService.findExternalBalance(bankId, externalBankId);
+    return await this.transactionService.findExternalBalance(bankId, externalBankId);
   }
 
   @Get(':id')
