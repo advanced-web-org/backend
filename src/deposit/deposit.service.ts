@@ -26,6 +26,9 @@ export class DepositService {
         },
       });
 
+      // TODO
+      // Add account balance update logic here
+
       return transactionPrisma.deposit.create({
         data: {
           transaction_id: createdTransaction.transaction_id,
