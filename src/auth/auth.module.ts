@@ -7,6 +7,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { PassportModule } from '@nestjs/passport';
+import { StaffsService } from 'src/staffs/staffs.service';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PassportModule } from '@nestjs/passport';
     AuthService, 
     PrismaService, 
     CustomersService,
+    StaffsService,
     LocalStrategy,
     JwtStrategy
   ],

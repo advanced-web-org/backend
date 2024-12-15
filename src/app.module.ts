@@ -11,6 +11,7 @@ import { PrismaService } from './prisma.service';
 import { TransactionModule } from './transaction/transaction.module';
 import { UsersModule } from './users/users.module';
 import { CustomersModule } from './customers/customers.module';
+import { StaffsModule } from './staffs/staffs.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { CustomersModule } from './customers/customers.module';
     BankModule,
     BeneficiariesModule,
     CustomersModule,
+    StaffsModule
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

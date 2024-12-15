@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { IUser, Role, TokenPayload } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
+import { StaffsService } from 'src/staffs/staffs.service';
 
 @Injectable()
 export class AuthService {
@@ -12,6 +13,7 @@ export class AuthService {
 
   constructor(
     private readonly customersService: CustomersService,
+    private readonly staffsService: StaffsService,
     private readonly jwtService: JwtService
   ) { }
 
@@ -56,43 +58,66 @@ export class AuthService {
   async validateCustomer(payload: LoginDto) {
     const { username, password } = payload;
 
-    const customer = await this.customersService.getCustomerByPhone(username);
-    if (!customer) {
+    let user: any;
+
+    if (username.includes('staff')) {
+      user = await this.staffsService.getStaffByUserName(username);
+    } else {
+      user = await this.customersService.getCustomerByPhone(username);
+    }
+
+    if (!user) {
       throw new UnauthorizedException('The username or password is incorrect');
     }
 
-    const isPasswordMatch = await this.comparePassword(password, customer.password);
+    const isPasswordMatch = await this.comparePassword(password, user.password);
     if (!isPasswordMatch) {
       throw new UnauthorizedException('The username or password is incorrect');
     }
 
     return {
-      phone: customer.phone,
-      fullName: customer.full_name,
-      email: customer.email
+      username: user.phone || user.username,
+      fullName: user.full_name,
+      email: user.email
     }
   }
 
   async login(payload: LoginDto) {
     const { username } = payload;
-    const customer = await this.customersService.getCustomerByPhone(username);
+    let user: IUser;
+    if (username.includes('staff')) {
+      const res = await this.staffsService.getStaffByUserName(username);
 
-    const tokenPayload: IUser = {
-      userId: customer.customer_id,
-      username: customer.phone,
-      role: Role.CUSTOMER
-    };
+      user = {
+        userId: res.staff_id,
+        username: res.username,
+        email: res.email,
+        fullName: res.full_name,
+        role: res.role == 'admin' ? Role.ADMIN : Role.EMPLOYEE
+      };
+    } else {
+      const res = await this.customersService.getCustomerByPhone(username);
 
-    const token = await this.generateToken(tokenPayload);
+      user = {
+        userId: res.customer_id,
+        username: res.phone,
+        email: res.email,
+        fullName: res.full_name,
+        role: Role.CUSTOMER
+      };
+    }
 
-    await this.updateRefreshToken(customer.phone, token.refreshToken);
+    const token = await this.generateToken(user);
 
+    if (user.role == Role.CUSTOMER) {
+      await this.updateRefreshToken(user.username, token.refreshToken);
+    }
     return {
       message: 'Login successfully',
       data: {
-        phone: customer.phone,
-        fullName: customer.full_name,
-        email: customer.email,
+        username: user.username,
+        fullName: user.fullName,
+        email: user.email,
         ...token
       }
     }
@@ -117,6 +142,7 @@ export class AuthService {
 
   async refreshToken(payload: RefreshTokenDto) {
     const { username, refreshToken } = payload;
+    
     const customer = await this.customersService.getCustomerByPhone(username);
 
     if (customer.refresh_token != refreshToken) {
@@ -126,6 +152,8 @@ export class AuthService {
     const tokenPayload: IUser = {
       userId: customer.customer_id,
       username: customer.phone,
+      email: customer.email,
+      fullName: customer.full_name,
       role: Role.CUSTOMER
     }
 
