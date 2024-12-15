@@ -13,6 +13,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum debt_status {
+  paid
+  unpaid
+  deleted
+}
+
 enum EncryptMethod {
   RSA
   PGP
@@ -143,7 +149,7 @@ model Debt {
   debtor_id     Int
   debt_amount   Decimal  @db.Decimal(15,2)
   debt_message  String?
-  status        String?
+  status        debt_status @default(unpaid)
   created_at    DateTime @default(now())
   updated_at    DateTime? @updatedAt
 
