@@ -9,10 +9,11 @@ import { QueryTestingController } from './query_testing/query_testing.controller
 import { PrismaService } from './prisma.service';
 import { DebtsController } from './debts/debts.controller';
 import { DebtsService } from './debts/debts.service';
+import { DebtsModule } from './debts/debts.module';
 
 @Module({
-  imports: [AuthModule, UsersModule, ConfigModule.forRoot()],
-  controllers: [AppController, QueryTestingController, DebtsController],
-  providers: [AppService, QueryTestingService, PrismaService, DebtsService],
+  imports: [AuthModule, UsersModule, ConfigModule.forRoot(), DebtsModule],
+  controllers: [AppController, QueryTestingController],
+  providers: [AppService, QueryTestingService, PrismaService],
 })
 export class AppModule {}
