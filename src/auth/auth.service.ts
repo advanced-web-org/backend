@@ -3,7 +3,7 @@ import { LoginDto, RefreshTokenDto, RegisterCustomerDto } from './dto';
 import { CustomersService } from 'src/customers/customers.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { TokenPayload } from './interfaces';
+import { IUser, Role, TokenPayload } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -77,8 +77,10 @@ export class AuthService {
     const { username } = payload;
     const customer = await this.customersService.getCustomerByPhone(username);
 
-    const tokenPayload: TokenPayload = {
-      phone: customer.phone
+    const tokenPayload: IUser = {
+      userId: customer.customer_id,
+      username: customer.phone,
+      role: Role.CUSTOMER
     };
 
     const token = await this.generateToken(tokenPayload);
@@ -99,7 +101,7 @@ export class AuthService {
   async generateToken(payload: TokenPayload) {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
-        payload,
+        { ...payload },
         {
           secret: 'JWT_SECRET_KEY',
           expiresIn: '1h'
@@ -121,9 +123,11 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const tokenPayload: TokenPayload = {
-      phone: customer.phone
-    };
+    const tokenPayload: IUser = {
+      userId: customer.customer_id,
+      username: customer.phone,
+      role: Role.CUSTOMER
+    }
 
     const token = await this.generateToken(tokenPayload);
 
