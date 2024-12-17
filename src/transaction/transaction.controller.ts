@@ -37,7 +37,7 @@ export class TransactionController {
 
     return (
       typeMethodMap[type]?.() ||
-      await this.transactionService.findAll(bankId, accountNumber)
+      (await this.transactionService.findAll(bankId, accountNumber))
     );
   }
 
@@ -59,11 +59,16 @@ export class TransactionController {
   }
 
   @Get('/external/balance')
-  async findExternalBalance(@Query('externalBankId') externalBankId: string = '') {
+  async findExternalBalance(
+    @Query('externalBankId') externalBankId: string = '',
+  ) {
     // get the bankId from admin auth token
     const bankId = 1;
 
-    return await this.transactionService.findExternalBalance(bankId, externalBankId);
+    return await this.transactionService.findExternalBalance(
+      bankId,
+      externalBankId,
+    );
   }
 
   @Get(':id')

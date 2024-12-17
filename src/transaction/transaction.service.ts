@@ -12,7 +12,9 @@ export class TransactionService {
     return await this.prisma.transaction.create({
       data: {
         ...createTransactionDto,
-        transaction_amount: new Prisma.Decimal(createTransactionDto.transaction_amount),
+        transaction_amount: new Prisma.Decimal(
+          createTransactionDto.transaction_amount,
+        ),
         fee_amount: new Prisma.Decimal(createTransactionDto.fee_amount),
       },
     });
@@ -154,16 +156,19 @@ export class TransactionService {
         },
       });
 
-      const groupedBalances = transactions.reduce<{ [key: string]: number }>((acc, transaction) => {
-        const key = [transaction.from_bank_id, transaction.to_bank_id]
-          .sort()
-          .join('-');
-        if (!acc[key]) {
-          acc[key] = 0;
-        }
-        acc[key] += Number(transaction.transaction_amount);
-        return acc;
-      }, {});
+      const groupedBalances = transactions.reduce<{ [key: string]: number }>(
+        (acc, transaction) => {
+          const key = [transaction.from_bank_id, transaction.to_bank_id]
+            .sort()
+            .join('-');
+          if (!acc[key]) {
+            acc[key] = 0;
+          }
+          acc[key] += Number(transaction.transaction_amount);
+          return acc;
+        },
+        {},
+      );
 
       return Object.keys(groupedBalances).map((key) => {
         const [fromBankId, toBankId] = key.split('-').map(Number);
