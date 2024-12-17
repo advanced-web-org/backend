@@ -8,9 +8,12 @@ import { QueryTestingService } from './query_testing/query_testing.service';
 import { QueryTestingController } from './query_testing/query_testing.controller';
 import { PrismaService } from './prisma.service';
 import { AppLoggerMiddleware } from './middleware/logger.middleware';
+import { TransactionModule } from './transaction/transaction.module';
+import { DepositModule } from './deposit/deposit.module';
+import { BankModule } from './bank/bank.module';
 
 @Module({
-  imports: [AuthModule, UsersModule, ConfigModule.forRoot()],
+  imports: [AuthModule, UsersModule, ConfigModule.forRoot(), TransactionModule, DepositModule, BankModule],
   controllers: [AppController, QueryTestingController],
   providers: [AppService, QueryTestingService, PrismaService],
 })
