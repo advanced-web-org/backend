@@ -1,11 +1,11 @@
 -- CreateEnum
-CREATE TYPE "EncryptMethod" AS ENUM ('RSA', 'PGP');
+CREATE TYPE "encrypt_method" AS ENUM ('RSA', 'PGP');
 
 -- CreateEnum
-CREATE TYPE "StaffRole" AS ENUM ('admin', 'employee');
+CREATE TYPE "staff_role" AS ENUM ('admin', 'employee');
 
 -- CreateEnum
-CREATE TYPE "TransType" AS ENUM ('transaction', 'deposit');
+CREATE TYPE "trans_type" AS ENUM ('transaction', 'deposit');
 
 -- CreateTable
 CREATE TABLE "customers" (
@@ -34,7 +34,7 @@ CREATE TABLE "banks" (
     "bank_id" SERIAL NOT NULL,
     "bank_name" TEXT,
     "public_key" TEXT,
-    "encrypt_method" "EncryptMethod",
+    "encrypt_method" "encrypt_method",
 
     CONSTRAINT "banks_pkey" PRIMARY KEY ("bank_id")
 );
@@ -54,7 +54,7 @@ CREATE TABLE "beneficiaries" (
 CREATE TABLE "staffs" (
     "staff_id" SERIAL NOT NULL,
     "full_name" TEXT,
-    "role" "StaffRole",
+    "role" "staff_role",
     "username" TEXT,
     "password" TEXT,
 
@@ -68,7 +68,7 @@ CREATE TABLE "transactions" (
     "from_account_number" TEXT,
     "to_bank_id" INTEGER,
     "to_account_number" TEXT,
-    "transaction_type" "TransType",
+    "transaction_type" "trans_type",
     "transaction_amount" DECIMAL(15,2) NOT NULL,
     "transaction_message" TEXT,
     "transaction_date" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
