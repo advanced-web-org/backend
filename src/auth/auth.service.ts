@@ -7,7 +7,7 @@ export class AuthService {
       fullname: 'John Doe',
       email: 'quancodon@gmail.com',
       phone: '0123456789',
-      account_number: '123456789',
+      account_number: 'A12345',
       account_balance: 1000000,
       role: 'user',
       access_token: 'abc123xyz',

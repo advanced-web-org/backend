@@ -10,6 +10,7 @@ import { AppLoggerMiddleware } from './middleware/logger.middleware';
 import { PrismaService } from './prisma.service';
 import { TransactionModule } from './transaction/transaction.module';
 import { UsersModule } from './users/users.module';
+import { AccountsModule } from './accounts/accounts.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { UsersModule } from './users/users.module';
     DepositModule,
     BankModule,
     BeneficiariesModule,
+    AccountsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
