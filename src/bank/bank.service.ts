@@ -17,7 +17,7 @@ export class BankService {
         NOT: {
           bank_id: bankId,
         },
-      }
+      },
     });
   }
 
@@ -25,7 +25,7 @@ export class BankService {
     return await this.prisma.bank.findUnique({
       where: {
         bank_id: bank_id,
-      }
+      },
     });
   }
 
