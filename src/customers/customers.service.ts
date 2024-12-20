@@ -64,6 +64,21 @@ export class CustomersService {
     }
   }
 
+  async getCustomerById(id: number): Promise<any> {
+    try {
+      const customer = await this.prismaService.customer.findUnique({
+        where: {
+          customer_id: id
+        }
+      });
+  
+      return customer;
+    } catch (error) {
+      this.logger.error(error.message);
+      throw new Error(error?.message || 'Something went wrong');
+    }
+  }
+
   async updateCustomer(phone: string, payload: UpdateCustomerDto): Promise<Customer> {
     try {
       const customer = await this.prismaService.customer.update({

@@ -175,4 +175,34 @@ export class AuthService {
   async updateRefreshToken(phone: string, refreshToken: string) {
     await this.customersService.updateCustomer(phone, { refresh_token: refreshToken });
   }
+
+  async changePassword(username: string, oldPassword: string, newPassword: string) {
+    let user: any;
+    if (username.includes('staff')) {
+      user = await this.staffsService.getStaffByUserName(username);
+    } else {
+      user = await this.customersService.getCustomerByPhone(username);
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('The username is incorrect');
+    }
+
+    const isPasswordMatch = await this.comparePassword(oldPassword, user.password);
+    if (!isPasswordMatch) {
+      throw new UnauthorizedException('The old password is incorrect');
+    }
+
+    const hashedPassword = await this.hashPassword(newPassword);
+
+    if (username.includes('staff')) {
+      await this.staffsService.updateStaff(username, { password: hashedPassword });
+    } else {
+      await this.customersService.updateCustomer(username, { password: hashedPassword });
+    }
+
+    return {
+      message: 'Password changed successfully'
+    }
+  }
 }
