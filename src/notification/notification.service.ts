@@ -1,13 +1,15 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { KafkaService } from '../kafka/kafka.service';
-import { DebtNotification } from './types/debt.notification';
+import { DebtNotification } from './types/debt-notification.type';
 
 @Injectable()
 export class NotificationService implements OnModuleInit {
   private io: Server;
 
-  constructor(private kafkaService: KafkaService) {}
+  constructor(
+    // private kafkaService: KafkaService
+  ) { }
 
   onModuleInit() {
     this.io = new Server(3001, { cors: { origin: '*' } });
@@ -24,9 +26,9 @@ export class NotificationService implements OnModuleInit {
     });
 
     // Start consuming Kafka messages
-    this.kafkaService.consume<DebtNotification>('debt-notifications', 'notification-group', (message) => {
-      this.handleNotification(message);
-    });
+    // this.kafkaService.consume<DebtNotification>('debt-notifications', 'notification-group', (message) => {
+    //   this.handleNotification(message);
+    // });
   }
 
   handleNotification(message: any) {

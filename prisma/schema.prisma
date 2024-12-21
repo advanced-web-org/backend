@@ -35,20 +35,19 @@ enum TransType {
 }
 
 model Customer {
-  customer_id    Int             @id @default(autoincrement())
-  full_name      String?
-  email          String?
-  phone          String?         @unique
-  password       String?
-  refresh_token  String?
+  customer_id   Int     @id @default(autoincrement())
+  full_name     String?
+  email         String?
+  phone         String? @unique
+  password      String?
+  refresh_token String?
 
   // Relations
-  accounts       Account[]
-  beneficiaries  Beneficiary[]
-  debtsCreditor  Debt[]          @relation("debtsCreditor")
-  debtsDebtor    Debt[]          @relation("debtsDebtor")
-  debtDeletions  DebtDeletion[]
-  PaymentSession PaymentSession[] 
+  accounts      Account[]
+  beneficiaries Beneficiary[]
+  debtsCreditor Debt[]         @relation("debtsCreditor")
+  debtsDebtor   Debt[]         @relation("debtsDebtor")
+  debtDeletions DebtDeletion[]
 
   @@map("customers")
 }
@@ -60,7 +59,7 @@ model Account {
   account_balance Decimal? @default(0.00) @db.Decimal(15, 2)
 
   // Relations
-  customer        Customer @relation(fields: [customer_id], references: [customer_id])
+  customer Customer @relation(fields: [customer_id], references: [customer_id])
 
   @@map("accounts")
 }
@@ -72,96 +71,95 @@ model Bank {
   encrypt_method EncryptMethod?
 
   // Relations
-  beneficiaries     Beneficiary[]
-  transactionsFrom  Transaction[] @relation("from_bank_id")
-  transactionsTo    Transaction[] @relation("to_bank_id")
+  beneficiaries    Beneficiary[]
+  transactionsFrom Transaction[] @relation("from_bank_id")
+  transactionsTo   Transaction[] @relation("to_bank_id")
 
   @@map("banks")
 }
 
 model Beneficiary {
-  beneficiary_id Int      @default(autoincrement())
+  beneficiary_id Int     @default(autoincrement())
   customer_id    Int
   bank_id        Int
   account_number String
   nickname       String?
 
   // Relations
-  customer       Customer @relation(fields: [customer_id], references: [customer_id])
-  bank           Bank     @relation(fields: [bank_id], references: [bank_id])
+  customer Customer @relation(fields: [customer_id], references: [customer_id])
+  bank     Bank     @relation(fields: [bank_id], references: [bank_id])
 
   @@id([customer_id, bank_id, account_number])
   @@map("beneficiaries")
 }
 
 model Staff {
-  staff_id  Int       @id @default(autoincrement())
+  staff_id  Int        @id @default(autoincrement())
   full_name String?
   role      StaffRole?
-  username  String?   @unique
+  username  String?    @unique
   password  String?
 
   // Relations
-  deposits  Deposit[]
+  deposits Deposit[]
 
   @@map("staffs")
 }
 
 model Transaction {
-  transaction_id      Int         @id @default(autoincrement())
+  transaction_id      Int        @id @default(autoincrement())
   from_bank_id        Int?
   from_account_number String?
   to_bank_id          Int?
   to_account_number   String?
   transaction_type    TransType?
-  transaction_amount  Decimal     @db.Decimal(15, 2)
+  transaction_amount  Decimal    @db.Decimal(15, 2)
   transaction_message String?
-  transaction_date    DateTime?   @default(now())
+  transaction_date    DateTime?  @default(now())
   fee_payer           String?
-  fee_amount          Decimal?    @default(0.00) @db.Decimal(15, 2)
+  fee_amount          Decimal?   @default(0.00) @db.Decimal(15, 2)
   e_signal            String?
 
   // Relations
-  from_bank           Bank?        @relation("from_bank_id", fields: [from_bank_id], references: [bank_id])
-  to_bank             Bank?        @relation("to_bank_id", fields: [to_bank_id], references: [bank_id])
+  from_bank Bank? @relation("from_bank_id", fields: [from_bank_id], references: [bank_id])
+  to_bank   Bank? @relation("to_bank_id", fields: [to_bank_id], references: [bank_id])
 
-  deposits            Deposit[]
-  debtPayments        DebtPayment[]
+  deposits     Deposit[]
+  debtPayments DebtPayment[]
 
   @@map("transactions")
 }
 
 model Deposit {
-  deposit_id     Int          @default(autoincrement())
+  deposit_id     Int @default(autoincrement())
   employee_id    Int
   transaction_id Int
 
   // Relations
-  employee       Staff        @relation(fields: [employee_id], references: [staff_id])
-  transaction    Transaction  @relation(fields: [transaction_id], references: [transaction_id])
+  employee    Staff       @relation(fields: [employee_id], references: [staff_id])
+  transaction Transaction @relation(fields: [transaction_id], references: [transaction_id])
 
   @@id([employee_id, transaction_id])
   @@map("deposits")
 }
 
 model Debt {
-  debt_id       Int      @id @default(autoincrement())
-  creditor_id   Int
-  debtor_id     Int
-  debt_amount   Decimal  @db.Decimal(15,2)
-  debt_message  String?
-  status        debt_status @default(unpaid)
-  created_at    DateTime @default(now())
-  updated_at    DateTime? @updatedAt
+  debt_id      Int         @id @default(autoincrement())
+  creditor_id  Int
+  debtor_id    Int
+  debt_amount  Decimal     @db.Decimal(15, 2)
+  debt_message String?
+  status       debt_status @default(unpaid)
+  created_at   DateTime    @default(now())
+  updated_at   DateTime?   @updatedAt
 
   // Relations
-  creditor      Customer     @relation("debtsCreditor", fields: [creditor_id], references: [customer_id])
-  debtor        Customer     @relation("debtsDebtor", fields: [debtor_id], references: [customer_id])
-  debtDeletion  DebtDeletion?
-  debtPayment   DebtPayment?
+  creditor     Customer      @relation("debtsCreditor", fields: [creditor_id], references: [customer_id])
+  debtor       Customer      @relation("debtsDebtor", fields: [debtor_id], references: [customer_id])
+  debtDeletion DebtDeletion?
+  debtPayment  DebtPayment?
 
   @@map("debts")
-  PaymentSession PaymentSession[]
 }
 
 model DebtDeletion {
@@ -171,8 +169,8 @@ model DebtDeletion {
   delete_message String?
 
   // Relations
-  debt           Debt     @relation(fields: [debt_id], references: [debt_id])
-  deleter        Customer @relation(fields: [deleter_id], references: [customer_id])
+  debt    Debt     @relation(fields: [debt_id], references: [debt_id])
+  deleter Customer @relation(fields: [deleter_id], references: [customer_id])
 
   @@id([debt_id])
   @@map("debt_deletions")
@@ -184,22 +182,18 @@ model DebtPayment {
   transaction_id Int
 
   // Relations
-  debt           Debt         @relation(fields: [debt_id], references: [debt_id])
-  transaction    Transaction  @relation(fields: [transaction_id], references: [transaction_id])
+  debt        Debt        @relation(fields: [debt_id], references: [debt_id])
+  transaction Transaction @relation(fields: [transaction_id], references: [transaction_id])
 
   @@id([debt_id])
   @@map("debt_payments")
 }
-model PaymentSession {
-  id             Int      @id @default(autoincrement())
-  user_id        Int
-  debt_id        Int
-  hashed_otp     String?
-  otp_expires_at DateTime?
 
-  user           Customer  @relation(fields: [user_id], references: [customer_id])
-  debt           Debt      @relation(fields: [debt_id], references: [debt_id])
+model OtpSession {
+  user_id    Int     @id
+  hashed_otp String?
+  created_at DateTime @default(now())
+  updated_at DateTime? @updatedAt
 
-  @@unique([user_id, debt_id])
-  @@map("payment_sessions")
+  @@map("otp_sessions")
 }

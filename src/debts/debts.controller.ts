@@ -41,15 +41,16 @@ export class DebtsController {
     return this.debtsService.getDebtorDebts(debtorId, status);
   }
 
-  @Post('initiate-debt-payment')
-  async initiatePayment(@Body() { debtId }: { debtId: number }) {
+  @Get('/:debt_id/initiate-debt-payment')
+  async initiatePayment(@Param('debt_id') debtId: number) {
+    var userId = 2;
 
-    return this.debtsService.initiatePayment(debtId);
+    return this.debtsService.initiatePayment(debtId, userId);
   }
 
   @Post('/:debt_id/confirm-debt-payment')
-  async confirmPayment(@Body() { otp }: {otp: string }, @Param('debt_id') debtId: number) {
+  async confirmPayment(@Body() { otp, otp_token }: { otp: string, otp_token: string }, @Param('debt_id') debtId: number) {
     var userId = 2;
-    return this.debtsService.verifyOtpAndPayDebt(userId,debtId, otp);
+    return this.debtsService.verifyOtpAndPayDebt(userId, debtId, otp, otp_token);
   }
 }
