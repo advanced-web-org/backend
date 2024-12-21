@@ -93,6 +93,7 @@ model Staff {
   role      staff_role?
   username  String?   @unique
   password  String?
+  refresh_token String?
 
   // Relations
   deposits  Deposit[]
