@@ -96,7 +96,7 @@ export class AuthService {
     } else {
       user = await this.customersService.getCustomerByPhone(username);
     }
-
+    
     if (!user) {
       throw new UnauthorizedException('The username or password is incorrect');
     }
