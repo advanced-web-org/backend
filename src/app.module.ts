@@ -12,6 +12,11 @@ import { TransactionModule } from './transaction/transaction.module';
 import { UsersModule } from './users/users.module';
 import { CustomersModule } from './customers/customers.module';
 import { StaffsModule } from './staffs/staffs.module';
+import { DebtsModule } from './debts/debts.module';
+import { OtpModule } from './otp/otp.module';
+import { AppMailerModule } from './mailer/mailer.module';
+import { KafkaModule } from './kafka/kafka.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -23,7 +28,12 @@ import { StaffsModule } from './staffs/staffs.module';
     BankModule,
     BeneficiariesModule,
     CustomersModule,
-    StaffsModule
+    StaffsModule,
+    DebtsModule,
+    OtpModule,
+    AppMailerModule,
+    KafkaModule,
+    NotificationModule
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
