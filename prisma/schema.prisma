@@ -19,17 +19,17 @@ enum debt_status {
   deleted
 }
 
-enum EncryptMethod {
+enum encrypt_method {
   RSA
   PGP
 }
 
-enum StaffRole {
+enum staff_role {
   admin
   employee
 }
 
-enum TransType {
+enum trans_type {
   transaction
   deposit
 }
@@ -68,7 +68,7 @@ model Bank {
   bank_id        Int            @id @default(autoincrement())
   bank_name      String?
   public_key     String?
-  encrypt_method EncryptMethod?
+  encrypt_method encrypt_method?
 
   // Relations
   beneficiaries    Beneficiary[]
@@ -96,9 +96,10 @@ model Beneficiary {
 model Staff {
   staff_id  Int        @id @default(autoincrement())
   full_name String?
-  role      StaffRole?
-  username  String?    @unique
+  role      staff_role?
+  username  String?   @unique
   password  String?
+  refresh_token String?
 
   // Relations
   deposits Deposit[]
@@ -112,8 +113,8 @@ model Transaction {
   from_account_number String?
   to_bank_id          Int?
   to_account_number   String?
-  transaction_type    TransType?
-  transaction_amount  Decimal    @db.Decimal(15, 2)
+  transaction_type    trans_type?
+  transaction_amount  Decimal     @db.Decimal(15, 2)
   transaction_message String?
   transaction_date    DateTime?  @default(now())
   fee_payer           String?

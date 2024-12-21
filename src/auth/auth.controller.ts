@@ -1,17 +1,49 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Logger, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { ChangePasswordDto, LoginDto, RefreshTokenDto, RegisterCustomerDto } from './dto';
+import { LocalAuthGuard } from './guards/local.guard';
+import { JwtAuthGuard } from './guards/jwt.guard';
+import { CurrentUser } from './decorators/user.decorator';
+import { CreateStaffDto } from 'src/staffs/dto/createStaff.dto';
+import { StaffsService } from 'src/staffs/staffs.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  private readonly logger = new Logger(AuthController.name);
 
-  @Post('signup')
-  signup(@Body() body: any) {
-    return this.authService.signup(body);
+  constructor(
+    private readonly authService: AuthService,
+    private readonly staffService: StaffsService
+  ) {}
+
+  @Post('register_customer')
+  async registerCustomer(@Body() body: RegisterCustomerDto) {
+    return this.authService.registerCustomer(body);
   }
 
-  @Post('signin')
-  signin(@Body() body: any) {
-    return this.authService.signin(body);
+  @Post('register_staff')
+  async registerStaff(@Body() body: CreateStaffDto) {
+    return this.authService.registerStaff(body);
+  }
+
+  @Post('login')
+  @UseGuards(LocalAuthGuard)
+  signin(@Body() body: LoginDto) {
+    return this.authService.login(body);
+  }
+
+  @Post('refresh_token')
+  async refreshToken(@Body() body: RefreshTokenDto) {
+    return this.authService.refreshToken(body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('change_password')
+  async changePassword(@Body() body: ChangePasswordDto, @CurrentUser() user: any) {
+    return this.authService.changePassword(
+      user.username,
+      body.oldPassword,
+      body.newPassword
+    );
   }
 }
