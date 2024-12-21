@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { UpdateCustomerDto } from 'src/customers/dto';
 import { PrismaService } from 'src/prisma.service';
+import { CreateStaffDto } from './dto/createStaff.dto';
 
 @Injectable()
 export class StaffsService {
@@ -48,6 +49,25 @@ export class StaffsService {
         },
         data: {
           ...payload
+        }
+      });
+
+      return staff;
+    } catch (error) {
+      this.logger.error(error.message);
+      throw new Error(error?.message || 'Something went wrong');
+    }
+  }
+
+  async createStaff(payload: CreateStaffDto): Promise<any> {
+    const { fullName, username, password, role } = payload;
+    try {
+      const staff = await this.prismaService.staff.create({
+        data: {
+          full_name: fullName,
+          username,
+          password,
+          role: role as any
         }
       });
 
