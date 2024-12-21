@@ -6,6 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { IUser, Role, TokenPayload } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { StaffsService } from 'src/staffs/staffs.service';
+import { CreateStaffDto } from 'src/staffs/dto/createStaff.dto';
 
 @Injectable()
 export class AuthService {
@@ -55,7 +56,37 @@ export class AuthService {
     }
   }
 
-  async validateCustomer(payload: LoginDto) {
+  async registerStaff(payload: CreateStaffDto) {
+    const { username, fullName, password, role } = payload;
+    const isStaffExist = await this.staffsService.getStaffByUserName(username);
+    if (isStaffExist) {
+      throw new BadRequestException('Username already registered');
+    }
+
+    const hashedPassword = await this.hashPassword(password);
+
+    const staff = await this.staffsService.createStaff({
+      username,
+      fullName,
+      password: hashedPassword,
+      role
+    });
+
+    if (!staff) {
+      throw new BadRequestException('Failed to register staff');
+    }
+
+    return {
+      message: 'Staff registered successfully',
+      data: {
+        username: staff.username,
+        fullName: staff.full_name,
+        email: staff.email
+      }
+    }
+  }
+
+  async validateUser(payload: LoginDto) {
     const { username, password } = payload;
 
     let user: any;
@@ -65,6 +96,8 @@ export class AuthService {
     } else {
       user = await this.customersService.getCustomerByPhone(username);
     }
+
+    this.logger.log(user);
 
     if (!user) {
       throw new UnauthorizedException('The username or password is incorrect');
@@ -91,7 +124,6 @@ export class AuthService {
       user = {
         userId: res.staff_id,
         username: res.username,
-        email: res.email,
         fullName: res.full_name,
         role: res.role == 'admin' ? Role.ADMIN : Role.EMPLOYEE
       };
@@ -109,15 +141,15 @@ export class AuthService {
 
     const token = await this.generateToken(user);
 
-    if (user.role == Role.CUSTOMER) {
-      await this.updateRefreshToken(user.username, token.refreshToken);
-    }
+    await this.updateRefreshToken(username, token.refreshToken);
+
     return {
       message: 'Login successfully',
       data: {
-        username: user.username,
-        fullName: user.fullName,
+        role: user.role,
+        fullname: user.fullName,
         email: user.email,
+        username: user.username,
         ...token
       }
     }
@@ -143,37 +175,64 @@ export class AuthService {
   async refreshToken(payload: RefreshTokenDto) {
     const { username, refreshToken } = payload;
     
-    const customer = await this.customersService.getCustomerByPhone(username);
+    let user: IUser;
+    let userRefreshToken: string;
+    if (username.includes('staff')) {
+      const res = await this.staffsService.getStaffByUserName(username);
 
-    if (customer.refresh_token != refreshToken) {
+      userRefreshToken = res.refresh_token;
+      user = {
+        userId: res.staff_id,
+        username: res.username,
+        fullName: res.full_name,
+        role: res.role == 'admin' ? Role.ADMIN : Role.EMPLOYEE
+      };
+    } else {
+      const res = await this.customersService.getCustomerByPhone(username);
+      userRefreshToken = res.refresh_token;
+      user = {
+        userId: res.customer_id,
+        username: res.phone,
+        email: res.email,
+        fullName: res.full_name,
+        role: Role.CUSTOMER
+      };
+    }
+
+    if (userRefreshToken != refreshToken) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
     const tokenPayload: IUser = {
-      userId: customer.customer_id,
-      username: customer.phone,
-      email: customer.email,
-      fullName: customer.full_name,
-      role: Role.CUSTOMER
+      userId: user.userId,
+      username: user.username,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role
     }
 
     const token = await this.generateToken(tokenPayload);
 
-    await this.updateRefreshToken(customer.phone, token.refreshToken);
+    await this.updateRefreshToken(user.username, token.refreshToken);
 
     return {
       message: 'Refresh token successfully',
       data: {
-        phone: customer.phone,
-        fullName: customer.full_name,
-        email: customer.email,
+        role: user.role,
+        fullname: user.fullName,
+        email: user.email,
+        username: user.username,
         ...token
       }
     }
   }
 
-  async updateRefreshToken(phone: string, refreshToken: string) {
-    await this.customersService.updateCustomer(phone, { refresh_token: refreshToken });
+  async updateRefreshToken(username: string, refreshToken: string) {
+    if (username.includes('staff')) {
+      await this.staffsService.updateStaff(username, { refresh_token: refreshToken });
+    } else {
+      await this.customersService.updateCustomer(username, { refresh_token: refreshToken });
+    }
   }
 
   async changePassword(username: string, oldPassword: string, newPassword: string) {
