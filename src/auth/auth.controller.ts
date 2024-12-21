@@ -1,4 +1,4 @@
-import { Body, Controller, Logger, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ChangePasswordDto, LoginDto, RefreshTokenDto, RegisterCustomerDto } from './dto';
 import { LocalAuthGuard } from './guards/local.guard';
@@ -45,5 +45,11 @@ export class AuthController {
       body.oldPassword,
       body.newPassword
     );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async me(@CurrentUser() user: any) {
+    return this.authService.me(user.userId, user.role);
   }
 }

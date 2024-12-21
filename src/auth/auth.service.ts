@@ -144,6 +144,7 @@ export class AuthService {
     return {
       message: 'Login successfully',
       data: {
+        userId: user.userId,
         role: user.role,
         fullname: user.fullName,
         email: user.email,
@@ -260,6 +261,34 @@ export class AuthService {
 
     return {
       message: 'Password changed successfully'
+    }
+  }
+
+  async me(userId: number, role: string) {
+    let user: any;
+    if (role == 'admin' || role == 'employee') {
+      user = await this.staffsService.getStaffById(userId);
+    } else {
+      user = await this.customersService.getCustomerById(userId);
+      user.account_number = '18948714';
+      user.account_balance = 1000000;
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return {
+      message: 'User found',
+      data: {
+        userId: user.customer_id || user.staff_id,
+        role: user.role,
+        fullname: user.full_name,
+        email: user.email,
+        username: user.phone || user.username,
+        account_number: user.account_number ?? null,
+        account_balance: user.account_balance ?? null
+      }
     }
   }
 }
