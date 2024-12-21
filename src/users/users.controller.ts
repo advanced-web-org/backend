@@ -1,7 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Res } from '@nestjs/common';
+import { Request, Response } from 'express';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
+import { Roles } from 'src/auth/decorators/roles.decorator';
+import { Role } from 'src/auth/interfaces';
+import { RoleGuard } from 'src/auth/guards/role.guard';
 
 @Controller('users')
 export class UsersController {
@@ -12,9 +17,12 @@ export class UsersController {
     return this.usersService.create(createUserDto);
   }
 
+  // @Roles(Role.ADMIN, Role.CUSTOMER)
+  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard, RoleGuard)
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  findAll(@Req() req: Request, @Res() res: Response) {
+    return res.status(200).json(req.user);
   }
 
   @Get(':id')

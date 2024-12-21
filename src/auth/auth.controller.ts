@@ -1,22 +1,38 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Logger, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { ChangePasswordDto, LoginDto, RefreshTokenDto, RegisterCustomerDto } from './dto';
+import { LocalAuthGuard } from './guards/local.guard';
+import { JwtAuthGuard } from './guards/jwt.guard';
 
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private readonly authService: AuthService) {}
 
-  @Post('signup')
-  signup(@Body() body: any) {
-    return this.authService.signup(body);
+  @Post('register_customer')
+  async registerCustomer(@Body() body: RegisterCustomerDto) {
+    return this.authService.registerCustomer(body);
   }
 
-  @Post('signin')
-  signin(@Body() body: any) {
-    return this.authService.signin(body);
+  @Post('login')
+  @UseGuards(LocalAuthGuard)
+  signin(@Body() body: LoginDto) {
+    return this.authService.login(body);
   }
 
-  @Get('me')
-  me() {
-    return this.authService.me();
+  @Post('refresh_token')
+  async refreshToken(@Body() body: RefreshTokenDto) {
+    return this.authService.refreshToken(body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('change_password')
+  async changePassword(@Body() body: ChangePasswordDto) {
+    return this.authService.changePassword(
+      body.username,
+      body.oldPassword,
+      body.newPassword
+    );
   }
 }
