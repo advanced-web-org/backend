@@ -4,14 +4,15 @@ import CreateDebtDto from './dto/create-debt.dto';
 import { DebtStatus } from './enum/debt-status.enum';
 import { Debt } from '@prisma/client';
 import DebtsValidator from './validator/debts.validator';
+import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 
 @Controller('debts')
 export class DebtsController {
   constructor(
     private readonly debtsService: DebtsService,
     private readonly debtsValidator: DebtsValidator,
-    ) { }
-  
+  ) { }
+
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -31,7 +32,7 @@ export class DebtsController {
     return this.debtsService.getCreditorDebts(creditorId, status);
   }
 
-  
+
   @Get("debtor/:debtor_id")
   @HttpCode(HttpStatus.OK)
   async getDebtorDebts(@Param('debtor_id') debtorId: number, @Query('status') status?: DebtStatus): Promise<Debt[]> {
@@ -40,9 +41,15 @@ export class DebtsController {
     return this.debtsService.getDebtorDebts(debtorId, status);
   }
 
-  @Post("payment/:debt_id")
-  @HttpCode(HttpStatus.OK)
-  async payDebt(@Param('debt_id') debtId: number) {
-    return this.debtsService.payDebt(debtId);
+  @Post('initiate-debt-payment')
+  async initiatePayment(@Body() { debtId }: { debtId: number }) {
+
+    return this.debtsService.initiatePayment(debtId);
+  }
+
+  @Post('/:debt_id/confirm-debt-payment')
+  async confirmPayment(@Body() { otp }: {otp: string }, @Param('debt_id') debtId: number) {
+    var userId = 2;
+    return this.debtsService.verifyOtpAndPayDebt(userId,debtId, otp);
   }
 }

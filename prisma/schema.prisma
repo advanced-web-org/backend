@@ -48,6 +48,7 @@ model Customer {
   debtsCreditor  Debt[]          @relation("debtsCreditor")
   debtsDebtor    Debt[]          @relation("debtsDebtor")
   debtDeletions  DebtDeletion[]
+  PaymentSession PaymentSession[] 
 
   @@map("customers")
 }
@@ -160,6 +161,7 @@ model Debt {
   debtPayment   DebtPayment?
 
   @@map("debts")
+  PaymentSession PaymentSession[]
 }
 
 model DebtDeletion {
@@ -187,4 +189,17 @@ model DebtPayment {
 
   @@id([debt_id])
   @@map("debt_payments")
+}
+model PaymentSession {
+  id             Int      @id @default(autoincrement())
+  user_id        Int
+  debt_id        Int
+  hashed_otp     String?
+  otp_expires_at DateTime?
+
+  user           Customer  @relation(fields: [user_id], references: [customer_id])
+  debt           Debt      @relation(fields: [debt_id], references: [debt_id])
+
+  @@unique([user_id, debt_id])
+  @@map("payment_sessions")
 }
