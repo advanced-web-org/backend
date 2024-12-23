@@ -1,12 +1,17 @@
-import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import { LoginDto, RefreshTokenDto, RegisterCustomerDto } from './dto';
-import { CustomersService } from 'src/customers/customers.service';
-import * as bcrypt from 'bcrypt';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { IUser, Role, TokenPayload } from './interfaces';
-import { v4 as uuidv4 } from 'uuid';
-import { StaffsService } from 'src/staffs/staffs.service';
+import * as bcrypt from 'bcrypt';
+import { CustomersService } from 'src/customers/customers.service';
 import { CreateStaffDto } from 'src/staffs/dto/createStaff.dto';
+import { StaffsService } from 'src/staffs/staffs.service';
+import { v4 as uuidv4 } from 'uuid';
+import { LoginDto, RefreshTokenDto, RegisterCustomerDto } from './dto';
+import { IUser, Role, TokenPayload } from './interfaces';
 
 @Injectable()
 export class AuthService {
@@ -15,8 +20,8 @@ export class AuthService {
   constructor(
     private readonly customersService: CustomersService,
     private readonly staffsService: StaffsService,
-    private readonly jwtService: JwtService
-  ) { }
+    private readonly jwtService: JwtService,
+  ) {}
 
   async hashPassword(password: string): Promise<string> {
     return await bcrypt.hash(password, 10);
@@ -39,7 +44,7 @@ export class AuthService {
       phone,
       fullName,
       email,
-      password: hashedPassword
+      password: hashedPassword,
     });
 
     if (!customer) {
@@ -51,9 +56,9 @@ export class AuthService {
       data: {
         phone: customer.phone,
         fullName: customer.full_name,
-        email: customer.email
-      }
-    }
+        email: customer.email,
+      },
+    };
   }
 
   async registerStaff(payload: CreateStaffDto) {
@@ -69,7 +74,7 @@ export class AuthService {
       username,
       fullName,
       password: hashedPassword,
-      role
+      role,
     });
 
     if (!staff) {
@@ -81,9 +86,9 @@ export class AuthService {
       data: {
         username: staff.username,
         fullName: staff.full_name,
-        email: staff.email
-      }
-    }
+        email: staff.email,
+      },
+    };
   }
 
   async validateUser(payload: LoginDto) {
@@ -96,7 +101,7 @@ export class AuthService {
     } else {
       user = await this.customersService.getCustomerByPhone(username);
     }
-    
+
     if (!user) {
       throw new UnauthorizedException('The username or password is incorrect');
     }
@@ -109,8 +114,8 @@ export class AuthService {
     return {
       username: user.phone || user.username,
       fullName: user.full_name,
-      email: user.email
-    }
+      email: user.email,
+    };
   }
 
   async login(payload: LoginDto) {
@@ -123,7 +128,7 @@ export class AuthService {
         userId: res.staff_id,
         username: res.username,
         fullName: res.full_name,
-        role: res.role == 'admin' ? Role.ADMIN : Role.EMPLOYEE
+        role: res.role == 'admin' ? Role.ADMIN : Role.EMPLOYEE,
       };
     } else {
       const res = await this.customersService.getCustomerByPhone(username);
@@ -133,7 +138,7 @@ export class AuthService {
         username: res.phone,
         email: res.email,
         fullName: res.full_name,
-        role: Role.CUSTOMER
+        role: Role.CUSTOMER,
       };
     }
 
@@ -149,9 +154,9 @@ export class AuthService {
         fullname: user.fullName,
         email: user.email,
         username: user.username,
-        ...token
-      }
-    }
+        ...token,
+      },
+    };
   }
 
   async generateToken(payload: TokenPayload) {
@@ -160,20 +165,20 @@ export class AuthService {
         { ...payload },
         {
           secret: 'JWT_SECRET_KEY',
-          expiresIn: '1h'
-        }
+          expiresIn: '1h',
+        },
       ),
-      uuidv4()
-    ])
+      uuidv4(),
+    ]);
     return {
       accessToken,
-      refreshToken
-    }
+      refreshToken,
+    };
   }
 
   async refreshToken(payload: RefreshTokenDto) {
     const { username, refreshToken } = payload;
-    
+
     let user: IUser;
     let userRefreshToken: string;
     if (username.includes('staff')) {
@@ -184,7 +189,7 @@ export class AuthService {
         userId: res.staff_id,
         username: res.username,
         fullName: res.full_name,
-        role: res.role == 'admin' ? Role.ADMIN : Role.EMPLOYEE
+        role: res.role == 'admin' ? Role.ADMIN : Role.EMPLOYEE,
       };
     } else {
       const res = await this.customersService.getCustomerByPhone(username);
@@ -194,7 +199,7 @@ export class AuthService {
         username: res.phone,
         email: res.email,
         fullName: res.full_name,
-        role: Role.CUSTOMER
+        role: Role.CUSTOMER,
       };
     }
 
@@ -207,8 +212,8 @@ export class AuthService {
       username: user.username,
       email: user.email,
       fullName: user.fullName,
-      role: user.role
-    }
+      role: user.role,
+    };
 
     const token = await this.generateToken(tokenPayload);
 
@@ -221,20 +226,28 @@ export class AuthService {
         fullname: user.fullName,
         email: user.email,
         username: user.username,
-        ...token
-      }
-    }
+        ...token,
+      },
+    };
   }
 
   async updateRefreshToken(username: string, refreshToken: string) {
     if (username.includes('staff')) {
-      await this.staffsService.updateStaff(username, { refresh_token: refreshToken });
+      await this.staffsService.updateStaff(username, {
+        refresh_token: refreshToken,
+      });
     } else {
-      await this.customersService.updateCustomer(username, { refresh_token: refreshToken });
+      await this.customersService.updateCustomer(username, {
+        refresh_token: refreshToken,
+      });
     }
   }
 
-  async changePassword(username: string, oldPassword: string, newPassword: string) {
+  async changePassword(
+    username: string,
+    oldPassword: string,
+    newPassword: string,
+  ) {
     let user: any;
     if (username.includes('staff')) {
       user = await this.staffsService.getStaffByUserName(username);
@@ -246,7 +259,10 @@ export class AuthService {
       throw new UnauthorizedException('The username is incorrect');
     }
 
-    const isPasswordMatch = await this.comparePassword(oldPassword, user.password);
+    const isPasswordMatch = await this.comparePassword(
+      oldPassword,
+      user.password,
+    );
     if (!isPasswordMatch) {
       throw new UnauthorizedException('The old password is incorrect');
     }
@@ -254,14 +270,18 @@ export class AuthService {
     const hashedPassword = await this.hashPassword(newPassword);
 
     if (username.includes('staff')) {
-      await this.staffsService.updateStaff(username, { password: hashedPassword });
+      await this.staffsService.updateStaff(username, {
+        password: hashedPassword,
+      });
     } else {
-      await this.customersService.updateCustomer(username, { password: hashedPassword });
+      await this.customersService.updateCustomer(username, {
+        password: hashedPassword,
+      });
     }
 
     return {
-      message: 'Password changed successfully'
-    }
+      message: 'Password changed successfully',
+    };
   }
 
   async me(userId: number, role: string) {
@@ -287,8 +307,8 @@ export class AuthService {
         email: user.email,
         username: user.phone || user.username,
         account_number: user.account_number ?? null,
-        account_balance: user.account_balance ?? null
-      }
-    }
+        account_balance: user.account_balance ?? null,
+      },
+    };
   }
 }

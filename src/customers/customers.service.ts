@@ -2,27 +2,29 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateCustomerDto, UpdateCustomerDto } from './dto';
 import { Customer } from '@prisma/client';
+import { AccountsService } from 'src/accounts/accounts.service';
 
 @Injectable()
 export class CustomersService {
   private readonly logger: Logger = new Logger(CustomersService.name);
 
   constructor(
-    private readonly prismaService: PrismaService
-  ) { }
+    private readonly prismaService: PrismaService,
+    private readonly accountsService: AccountsService,
+  ) {}
 
   async isCustomerExist(phone: string): Promise<boolean> {
     try {
       const customer = await this.prismaService.customer.findUnique({
         where: {
-          phone
-        }
-      })
-  
+          phone,
+        },
+      });
+
       if (customer) {
         return true;
       }
-  
+
       return false;
     } catch (error) {
       this.logger.error(error.message);
@@ -38,10 +40,10 @@ export class CustomersService {
           phone,
           full_name: fullName,
           email,
-          password
-        }
+          password,
+        },
       });
-  
+
       return customer;
     } catch (error) {
       this.logger.error(error.message);
@@ -53,10 +55,10 @@ export class CustomersService {
     try {
       const customer = await this.prismaService.customer.findUnique({
         where: {
-          phone
-        }
+          phone,
+        },
       });
-  
+
       return customer;
     } catch (error) {
       this.logger.error(error.message);
@@ -68,10 +70,10 @@ export class CustomersService {
     try {
       const customer = await this.prismaService.customer.findUnique({
         where: {
-          customer_id: id
-        }
+          customer_id: id,
+        },
       });
-  
+
       return customer;
     } catch (error) {
       this.logger.error(error.message);
@@ -79,34 +81,26 @@ export class CustomersService {
     }
   }
 
-  async updateCustomer(phone: string, payload: UpdateCustomerDto): Promise<Customer> {
+  async updateCustomer(
+    phone: string,
+    payload: UpdateCustomerDto,
+  ): Promise<Customer> {
     try {
       const customer = await this.prismaService.customer.update({
         where: {
-          phone: phone
+          phone: phone,
         },
         data: {
-          ...payload
-        }
+          ...payload,
+        },
       });
-  
+
       return customer;
     } catch (error) {
       this.logger.error(error.message);
       throw new Error(error?.message || 'Something went wrong');
     }
-import { Injectable } from '@nestjs/common';
-import { CreateCustomerDto } from './dto/create-customer.dto';
-import { UpdateCustomerDto } from './dto/update-customer.dto';
-import { AccountsService } from 'src/accounts/accounts.service';
-import { PrismaService } from 'src/prisma.service';
-
-@Injectable()
-export class CustomersService {
-  constructor(
-    private readonly prismaService: PrismaService,
-    private readonly accountsService: AccountsService,
-  ) {}
+  }
 
   create(createCustomerDto: CreateCustomerDto) {
     return 'This action adds a new customer';
