@@ -17,7 +17,7 @@ export class TransactionService {
   ): Promise<Transaction> {
     // Check if 2 account valid
     const fromAccount = this.accountService.findOnebyAccountNumber(
-      createTransactionDto.from_account_number,
+      createTransactionDto.from_account_number ?? '',
     );
     const toAccount = this.accountService.findOnebyAccountNumber(
       createTransactionDto.to_account_number,

@@ -16,7 +16,7 @@ export class AuthController {
   }
 
   @Get('me')
-  me() {
-    return this.authService.me();
+  me(@Body() body: any) {
+    return this.authService.me(body);
   }
 }
