@@ -17,6 +17,7 @@ import { OtpModule } from './otp/otp.module';
 import { AppMailerModule } from './mailer/mailer.module';
 import { KafkaModule } from './kafka/kafka.module';
 import { NotificationModule } from './notification/notification.module';
+import { AccountsModule } from './accounts/accounts.module';
 
 @Module({
   imports: [
@@ -33,7 +34,8 @@ import { NotificationModule } from './notification/notification.module';
     OtpModule,
     AppMailerModule,
     KafkaModule,
-    NotificationModule
+    NotificationModule,
+    AccountsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

@@ -2,13 +2,57 @@ import { Injectable } from '@nestjs/common';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { PrismaService } from 'src/prisma.service';
-import { Prisma, trans_type } from '@prisma/client';
+import { Prisma, trans_type, Transaction } from '@prisma/client';
+import { AccountsService } from 'src/accounts/accounts.service';
 
 @Injectable()
 export class TransactionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accountService: AccountsService,
+  ) {}
 
-  async create(createTransactionDto: CreateTransactionDto) {
+  async create(
+    createTransactionDto: CreateTransactionDto,
+  ): Promise<Transaction> {
+    // Check if 2 account valid
+    const fromAccount = this.accountService.findOnebyAccountNumber(
+      createTransactionDto.from_account_number ?? '',
+    );
+    const toAccount = this.accountService.findOnebyAccountNumber(
+      createTransactionDto.to_account_number,
+    );
+
+    if (!(await fromAccount) || !(await toAccount)) {
+      throw new Error('Account not found');
+    }
+
+    // Check if the balance is enough
+    const fromAccountData = await fromAccount;
+
+    if (
+      fromAccountData?.account_balance &&
+      fromAccountData.account_balance.toNumber() <
+        createTransactionDto.transaction_amount +
+          createTransactionDto.fee_amount
+    ) {
+      throw new Error('Insufficient balance');
+    }
+
+    // Update the balance
+    await this.prisma.account.update({
+      where: {
+        account_number: createTransactionDto.from_account_number,
+      },
+      data: {
+        account_balance: new Prisma.Decimal(
+          (fromAccountData?.account_balance?.toNumber() ?? 0) -
+            createTransactionDto.transaction_amount -
+            createTransactionDto.fee_amount,
+        ),
+      },
+    });
+
     return await this.prisma.transaction.create({
       data: {
         ...createTransactionDto,
