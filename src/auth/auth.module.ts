@@ -9,6 +9,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { PassportModule } from '@nestjs/passport';
 import { StaffsService } from 'src/staffs/staffs.service';
 import { AccountsService } from 'src/accounts/accounts.service';
+import { OtpModule } from 'src/otp/otp.module';
+import { AppMailerModule } from 'src/mailer/mailer.module';
 
 @Module({
   imports: [
@@ -17,6 +19,8 @@ import { AccountsService } from 'src/accounts/accounts.service';
       signOptions: { expiresIn: '99d' },
     }),
     PassportModule,
+    OtpModule,
+    AppMailerModule
   ],
   controllers: [AuthController],
   providers: [

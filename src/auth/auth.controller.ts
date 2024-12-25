@@ -83,4 +83,19 @@ export class AuthController {
 
     return this.authService.me(user.userId, user.role);
   }
+
+  @Post('forgot_password/request_otp')
+  async requestOtp(@Body() body: { phone: string }) {
+    return this.authService.requestOtpForPasswordReset(body.phone);
+  }
+
+  @Post('forgot_password/verify_otp')
+  async verifyOtp(@Body() body: { username: string, otp: string, otpToken: string }) {
+    return this.authService.verifyOtpForPasswordReset(body.username, body.otp, body.otpToken);
+  }
+
+  @Post('forgot_password/reset_password')
+  async resetPassword(@Body() body: { username: string, newPassword: string }) {
+    return this.authService.resetPassword(body.username, body.newPassword);
+  }
 }
