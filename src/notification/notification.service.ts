@@ -9,7 +9,6 @@ export class NotificationService implements OnModuleInit {
 
   constructor(
     private kafkaService: KafkaService
-    private kafkaService: KafkaService
   ) { }
 
   onModuleInit() {
