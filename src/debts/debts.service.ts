@@ -16,6 +16,7 @@ export class DebtsService {
     private readonly otpService: OtpService,
     private readonly mailer: AppMailerService,
     private readonly kafkaService: KafkaService
+    private readonly kafkaService: KafkaService
   ) { }
 
   async createDebt(createDebtDto: CreateDebtDto) {

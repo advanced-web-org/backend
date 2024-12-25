@@ -9,6 +9,7 @@ export class NotificationService implements OnModuleInit {
 
   constructor(
     private kafkaService: KafkaService
+    private kafkaService: KafkaService
   ) { }
 
   onModuleInit() {
@@ -26,6 +27,9 @@ export class NotificationService implements OnModuleInit {
     });
 
     // Start consuming Kafka messages
+    this.kafkaService.consume<DebtNotification>('debt-notifications', 'notification-group', (message) => {
+      this.handleDebtNotification(message);
+    });
     this.kafkaService.consume<DebtNotification>('debt-notifications', 'notification-group', (message) => {
       this.handleDebtNotification(message);
     });
