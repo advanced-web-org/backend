@@ -15,7 +15,7 @@ export class DebtsService {
     private readonly prisma: PrismaService,
     private readonly otpService: OtpService,
     private readonly mailer: AppMailerService,
-    // private readonly kafkaService: KafkaService
+    private readonly kafkaService: KafkaService
   ) { }
 
   async createDebt(createDebtDto: CreateDebtDto) {
@@ -92,12 +92,12 @@ export class DebtsService {
     });
 
     // Publish Kafka message to notify the creditor
-    // await this.kafkaService.produce<DebtNotification>('debt-notifications', {
-    //   creditorId: debt.creditor_id,
-    //   message: `Your debtor has just paid a debt of ${debt.debt_amount}.`,
-    //   debtId: debtId,
-    //   timestamp: new Date().toISOString(),
-    // });
+    await this.kafkaService.produce<DebtNotification>('debt-notifications', {
+      creditorId: debt.creditor_id,
+      message: `Your debtor has just paid a debt of ${debt.debt_amount}.`,
+      debtId: debtId,
+      timestamp: new Date().toISOString(),
+    });
 
     return { message: 'Debt paid successfully' };
   }

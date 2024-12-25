@@ -4,7 +4,7 @@ import { Kafka } from 'kafkajs';
 import { KafkaModule } from 'src/kafka/kafka.module';
 
 @Module({
-  // imports: [KafkaModule],
+  imports: [KafkaModule],
   providers: [NotificationService],
   exports: [NotificationService],
 })

@@ -15,6 +15,7 @@ import { AppMailerController } from './mailer.controller';
       useFactory: async (configService: ConfigService) => {
         console.log('EMAIL_USERNAME:', configService.get<string>('EMAIL_USERNAME'));
         console.log('EMAIL_FROM:', configService.get<string>('EMAIL_FROM'));
+        console.log('Resolved Template Path:', path.join(__dirname, 'templates'));
         return {
           transport: {
             host: 'smtp.gmail.com',
