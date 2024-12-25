@@ -8,7 +8,7 @@ export class NotificationService implements OnModuleInit {
   private io: Server;
 
   constructor(
-    // private kafkaService: KafkaService
+    private kafkaService: KafkaService
   ) { }
 
   onModuleInit() {
@@ -26,12 +26,12 @@ export class NotificationService implements OnModuleInit {
     });
 
     // Start consuming Kafka messages
-    // this.kafkaService.consume<DebtNotification>('debt-notifications', 'notification-group', (message) => {
-    //   this.handleNotification(message);
-    // });
+    this.kafkaService.consume<DebtNotification>('debt-notifications', 'notification-group', (message) => {
+      this.handleDebtNotification(message);
+    });
   }
 
-  handleNotification(message: any) {
+  handleDebtNotification(message: DebtNotification) {
     const { creditorId, ...notification } = message;
     this.io.to(String(creditorId)).emit('debt-notification', notification);
   }

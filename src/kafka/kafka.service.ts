@@ -7,17 +7,17 @@ export class KafkaService implements OnModuleDestroy {
   private producer: Producer;
   private consumers: Consumer[] = [];
 
-  // constructor() {
-  //   this.kafka = new Kafka({
-  //     clientId: 'nestjs-app',
-  //     brokers: ['localhost:9092'],
-  //   });
-  //   this.producer = this.kafka.producer();
-  // }
+  constructor() {
+    this.kafka = new Kafka({
+      clientId: 'nestjs-app',
+      brokers: ['localhost:9092'],
+    });
+    this.producer = this.kafka.producer();
+  }
 
-  // async onModuleInit() {
-  //   await this.producer.connect();
-  // }
+  async onModuleInit() {
+    await this.producer.connect();
+  }
 
   async produce<Type>(topic: string, message: Type) {
     await this.producer.send({
