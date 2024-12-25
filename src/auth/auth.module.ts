@@ -14,7 +14,7 @@ import { AccountsService } from 'src/accounts/accounts.service';
   imports: [
     JwtModule.register({
       secret: 'JWT_SECRET_KEY',
-      signOptions: { expiresIn: '1d' },
+      signOptions: { expiresIn: '99d' },
     }),
     PassportModule,
   ],

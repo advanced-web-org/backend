@@ -6,7 +6,7 @@ import { OtpService } from 'src/otp/otp.service';
 import { AppMailerService } from 'src/mailer/mailer.service';
 import { assert } from 'console';
 import { KafkaService } from 'src/kafka/kafka.service';
-import { DebtNotification } from 'src/notification/types/debt-notification.type';
+import { DebtAction, DebtNotification } from 'src/notification/types/debt-notification.type';
 import { OtpData } from 'src/otp/types/otp-data.type';
 
 @Injectable()
@@ -15,6 +15,7 @@ export class DebtsService {
     private readonly prisma: PrismaService,
     private readonly otpService: OtpService,
     private readonly mailer: AppMailerService,
+    private readonly kafkaService: KafkaService
     private readonly kafkaService: KafkaService
   ) { }
 
@@ -93,12 +94,53 @@ export class DebtsService {
 
     // Publish Kafka message to notify the creditor
     await this.kafkaService.produce<DebtNotification>('debt-notifications', {
-      creditorId: debt.creditor_id,
+      userIdToSend: debt.creditor_id,
       message: `Your debtor has just paid a debt of ${debt.debt_amount}.`,
       debtId: debtId,
       timestamp: new Date().toISOString(),
+      action: DebtAction.PAID
     });
 
     return { message: 'Debt paid successfully' };
+  }
+
+  async deleteDebt(debtId: number, userId: number) {
+    const debt = await this.prisma.debt.findUnique({ where: { debt_id: debtId } });
+    if (!debt) {
+      throw new BadRequestException('Debt not found');
+    }
+
+    if (userId !== debt.creditor_id && userId !== debt.debtor_id) {
+      throw new BadRequestException('You are not authorized to delete this debt');
+    }
+
+    if (debt.status === DebtStatus.deleted) {
+      throw new BadRequestException('Debt has already been deleted');
+    }
+
+    if (debt.status === DebtStatus.paid) {
+      throw new BadRequestException('Debt has already been paid');
+    }
+
+    await this.prisma.debt.update({
+      where: { debt_id: debtId },
+      data: { status: DebtStatus.deleted },
+    });
+
+    const userIdToSendNotification = this.isCreditor(userId, debt.creditor_id) ? debt.debtor_id : debt.creditor_id;
+    // Publish Kafka message to notify the user
+    await this.kafkaService.produce<DebtNotification>('debt-notifications', {
+      userIdToSend: userIdToSendNotification,
+      message: `Your ${this.isCreditor(userId, debt.creditor_id) ? 'creditor' : 'debtor'} has just deleted a debt of ${debt.debt_amount}.`,
+      debtId: debtId,
+      timestamp: new Date().toISOString(),
+      action: DebtAction.DELETED
+    });
+
+    return { message: 'Debt deleted successfully' };
+  }
+
+  private isCreditor(userId: number, creditorId: number) {
+    return userId === creditorId;
   }
 }
