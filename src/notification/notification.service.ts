@@ -32,7 +32,7 @@ export class NotificationService implements OnModuleInit {
   }
 
   handleDebtNotification(message: DebtNotification) {
-    const { creditorId, ...notification } = message;
-    this.io.to(String(creditorId)).emit('debt-notification', notification);
+    const { userIdToSend, ...notification } = message;
+    this.io.to(String(userIdToSend)).emit('debt-notification', notification);
   }
 }
