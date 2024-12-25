@@ -176,6 +176,10 @@ export class TransactionService {
           },
         ],
       },
+      include: {
+        from_bank: true,
+        to_bank: true,
+      },
     });
 
     return transactions;
