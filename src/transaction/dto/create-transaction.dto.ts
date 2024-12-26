@@ -2,7 +2,7 @@ import { ApiProperty, ApiSchema } from '@nestjs/swagger';
 import { trans_type } from '@prisma/client';
 
 @ApiSchema({ name: 'CreateTransactionDto description' })
-export class CreateTransactionDto {
+export class InternalTransactionDto {
   @ApiProperty({ description: 'The bank id of the sender' })
   from_bank_id: number;
 
@@ -38,4 +38,13 @@ export class CreateTransactionDto {
 
   @ApiProperty({ description: 'The e sign of the transaction' })
   e_signal?: string;
+}
+
+export class ExternalTransactionDto {
+
+}
+
+export class CreateTransactionDto {
+  type: 'internal' | 'external';
+  data: InternalTransactionDto | ExternalTransactionDto;
 }
