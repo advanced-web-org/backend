@@ -1,8 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { DebtsService } from './debts.service';
 import CreateDebtDto from './dto/create-debt.dto';
-import { DebtStatus } from './enum/debt-status.enum';
-import { Debt } from '@prisma/client';
+import { Debt, debt_status } from '@prisma/client';
 import DebtsValidator from './validator/debts.validator';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { CurrentUser } from 'src/auth/decorators/user.decorator';
@@ -32,7 +31,7 @@ export class DebtsController {
   @HttpCode(HttpStatus.OK)
   async getCreditorDebts(
     @Param('creditor_id') creditorId: number,
-    @Query('status') status?: DebtStatus
+    @Query('status') status?: debt_status
   ): Promise<Debt[]> {
     await this.debtsValidator.checkAccountExistence(creditorId, 'Creditor');
 
@@ -44,7 +43,7 @@ export class DebtsController {
   @HttpCode(HttpStatus.OK)
   async getDebtorDebts(
     @Param('debtor_id') debtorId: number,
-    @Query('status') status?: DebtStatus
+    @Query('status') status?: debt_status
   ): Promise<Debt[]> {
     await this.debtsValidator.checkAccountExistence(debtorId, 'Debtor');
 
