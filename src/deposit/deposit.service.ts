@@ -8,33 +8,22 @@ import { TransactionService } from 'src/transaction/transaction.service';
 @Injectable()
 export class DepositService {
   constructor(
-    private prisma: PrismaService,
-    private transactionService: TransactionService,
+    private readonly prisma: PrismaService,
+    private readonly transactionService: TransactionService,
   ) {}
 
   async create(createDepositDto: CreateDepositDto) {
-    return await this.prisma.$transaction(async (transactionPrisma) => {
-      const { transaction, ...rest } = createDepositDto;
+    // Create a transaction
+    const transaction = this.transactionService.create(
+      createDepositDto.transaction,
+    );
 
-      const createdTransaction = await transactionPrisma.transaction.create({
-        data: {
-          ...transaction,
-          transaction_amount: new Prisma.Decimal(
-            transaction.transaction_amount,
-          ),
-          fee_amount: new Prisma.Decimal(transaction.fee_amount),
-        },
-      });
-
-      // TODO
-      // Add account balance update logic here
-
-      return transactionPrisma.deposit.create({
-        data: {
-          transaction_id: createdTransaction.transaction_id,
-          employee_id: rest.employee_id,
-        },
-      });
+    // Create a deposit
+    return await this.prisma.deposit.create({
+      data: {
+        transaction_id: (await transaction).transaction_id,
+        employee_id: createDepositDto.employee_id,
+      },
     });
   }
 
