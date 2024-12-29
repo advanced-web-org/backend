@@ -41,6 +41,28 @@ export class TransactionController {
     );
   }
 
+  @Get('/:AccountId')
+  async findAllByAccount(
+    @Param('AccountId') accountNumber: string,
+    @Query('type') type: string = 'all',
+  ) {
+    // get the bankId from the auth token
+    const bankId = 1;
+
+    const typeMethodMap: Record<string, () => any> = {
+      received: async () =>
+        await this.transactionService.findReceived(bankId, accountNumber),
+      sent: () => this.transactionService.findSent(bankId, accountNumber),
+      'debt-paid': async () =>
+        await this.transactionService.findDebtPaid(bankId, accountNumber),
+    };
+
+    return (
+      typeMethodMap[type]?.() ||
+      (await this.transactionService.findAll(bankId, accountNumber))
+    );
+  }
+
   @Get('/external')
   async findAllExternal(
     @Query('startDate') startDate: string = '',

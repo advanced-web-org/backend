@@ -20,6 +20,8 @@ export class UsersController {
     return this.usersService.create(createUserDto);
   }
 
+  
+
   @Get()
   findAll() {
     return this.usersService.findAll();
