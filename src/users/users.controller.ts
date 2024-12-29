@@ -20,6 +20,8 @@ export class UsersController {
   // @Roles(Role.ADMIN, Role.CUSTOMER)
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RoleGuard)
+  
+
   @Get()
   findAll(@Req() req: Request, @Res() res: Response) {
     return res.status(200).json(req.user);

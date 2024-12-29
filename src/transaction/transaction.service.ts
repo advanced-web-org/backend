@@ -15,10 +15,52 @@ export class TransactionService {
   async create(
     createTransactionDto: CreateTransactionDto,
   ): Promise<Transaction> {
+    let isDeposit: boolean = false;
+
+    if (createTransactionDto.transaction_type == 'deposit') isDeposit = true;
+
+    // Deposit logic
+    if (isDeposit) {
+      const toAccount = this.accountService.findOnebyAccountNumber(
+        createTransactionDto.to_account_number,
+      );
+
+      if (!(await toAccount)) {
+        throw new Error('Account not found');
+      }
+
+      // Update the balance
+      const toAccountData = await toAccount;
+
+      await this.prisma.account.update({
+        where: {
+          account_number: createTransactionDto.to_account_number,
+        },
+        data: {
+          account_balance: new Prisma.Decimal(
+            (toAccountData?.account_balance?.toNumber() ?? 0) +
+              Number(createTransactionDto.transaction_amount),
+          ),
+        },
+      });
+
+      return await this.prisma.transaction.create({
+        data: {
+          ...createTransactionDto,
+          transaction_amount: new Prisma.Decimal(
+            createTransactionDto.transaction_amount,
+          ),
+          fee_amount: new Prisma.Decimal(createTransactionDto.fee_amount),
+        },
+      });
+    }
+
+    // Normal transaction logic
     // Check if 2 account valid
     const fromAccount = this.accountService.findOnebyAccountNumber(
       createTransactionDto.from_account_number ?? '',
     );
+
     const toAccount = this.accountService.findOnebyAccountNumber(
       createTransactionDto.to_account_number,
     );
