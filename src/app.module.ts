@@ -18,6 +18,7 @@ import { AppMailerModule } from './mailer/mailer.module';
 import { KafkaModule } from './kafka/kafka.module';
 import { NotificationModule } from './notification/notification.module';
 import { AccountsModule } from './accounts/accounts.module';
+import { PartnerModule } from './partner/partner.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { AccountsModule } from './accounts/accounts.module';
     KafkaModule,
     NotificationModule,
     AccountsModule,
+    PartnerModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
