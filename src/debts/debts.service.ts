@@ -34,7 +34,7 @@ export class DebtsService {
   async getCreditorDebts(creditorId: number, status?: debt_status): Promise<Debt[]> {
     const where: { creditor_id: number; status?: debt_status } = { creditor_id: creditorId };
   
-    if (status !== undefined) {
+    if (status) {
       where.status = status;
     }
   
@@ -44,7 +44,7 @@ export class DebtsService {
   async getDebtorDebts(debtorId: number, status?: debt_status): Promise<Debt[]> {
     const where: { debtor_id: number; status?: debt_status } = { debtor_id: debtorId };
   
-    if (status !== undefined) {
+    if (status) {
       where.status = status;
     }
   
