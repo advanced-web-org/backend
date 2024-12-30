@@ -86,7 +86,6 @@ export class AuthService {
       data: {
         username: staff.username,
         fullName: staff.full_name,
-        email: staff.email,
       },
     };
   }
@@ -124,10 +123,14 @@ export class AuthService {
     if (username.includes('staff')) {
       const res = await this.staffsService.getStaffByUserName(username);
 
+      if (!res) {
+        throw new UnauthorizedException('The username is incorrect');
+      }
+
       user = {
-        userId: res.staff_id,
-        username: res.username,
-        fullName: res.full_name,
+        userId: res.staff_id.toString(),
+        username: res.username? res.username : '',
+        fullName: res.full_name? res.full_name : '',
         role: res.role == 'admin' ? Role.ADMIN : Role.EMPLOYEE,
       };
     } else {
@@ -184,11 +187,14 @@ export class AuthService {
     if (username.includes('staff')) {
       const res = await this.staffsService.getStaffByUserName(username);
 
-      userRefreshToken = res.refresh_token;
+      if (!res) {
+        throw new UnauthorizedException('User not found');
+      }
+      userRefreshToken = res.refresh_token ?? '';
       user = {
-        userId: res.staff_id,
-        username: res.username,
-        fullName: res.full_name,
+        userId: res.staff_id.toString(),
+        username: res.username? res.username : '',
+        fullName: res.full_name? res.full_name : '',
         role: res.role == 'admin' ? Role.ADMIN : Role.EMPLOYEE,
       };
     } else {

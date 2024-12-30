@@ -15,10 +15,52 @@ export class TransactionService {
   async create(
     createTransactionDto: CreateTransactionDto,
   ): Promise<Transaction> {
+    let isDeposit: boolean = false;
+
+    if (createTransactionDto.transaction_type == 'deposit') isDeposit = true;
+
+    // Deposit logic
+    if (isDeposit) {
+      const toAccount = this.accountService.findOnebyAccountNumber(
+        createTransactionDto.to_account_number,
+      );
+
+      if (!(await toAccount)) {
+        throw new Error('Account not found');
+      }
+
+      // Update the balance
+      const toAccountData = await toAccount;
+
+      await this.prisma.account.update({
+        where: {
+          account_number: createTransactionDto.to_account_number,
+        },
+        data: {
+          account_balance: new Prisma.Decimal(
+            (toAccountData?.account_balance?.toNumber() ?? 0) +
+              Number(createTransactionDto.transaction_amount),
+          ),
+        },
+      });
+
+      return await this.prisma.transaction.create({
+        data: {
+          ...createTransactionDto,
+          transaction_amount: new Prisma.Decimal(
+            createTransactionDto.transaction_amount,
+          ),
+          fee_amount: new Prisma.Decimal(createTransactionDto.fee_amount),
+        },
+      });
+    }
+
+    // Normal transaction logic
     // Check if 2 account valid
     const fromAccount = this.accountService.findOnebyAccountNumber(
       createTransactionDto.from_account_number ?? '',
     );
+
     const toAccount = this.accountService.findOnebyAccountNumber(
       createTransactionDto.to_account_number,
     );
@@ -176,6 +218,10 @@ export class TransactionService {
           },
         ],
       },
+      include: {
+        from_bank: true,
+        to_bank: true,
+      },
     });
 
     return transactions;
@@ -198,17 +244,22 @@ export class TransactionService {
             to_bank_id: bankId,
           },
         },
+        include: {
+          from_bank: true,
+          to_bank: true,
+        }
       });
 
-      const groupedBalances = transactions.reduce<{ [key: string]: number }>(
+      const groupedBalances = transactions.reduce<{ [key: string]: { amount: number, bankName: string } }>(
         (acc, transaction) => {
           const key = [transaction.from_bank_id, transaction.to_bank_id]
             .sort()
             .join('-');
           if (!acc[key]) {
-            acc[key] = 0;
+            acc[key] = { amount: 0, bankName: '' };
           }
-          acc[key] += Number(transaction.transaction_amount);
+          acc[key].amount += Number(transaction.transaction_amount);
+          acc[key].bankName = transaction.from_bank_id === bankId ? transaction.to_bank?.bank_name || '' : transaction.from_bank?.bank_name || '';
           return acc;
         },
         {},
@@ -217,8 +268,9 @@ export class TransactionService {
       return Object.keys(groupedBalances).map((key) => {
         const [fromBankId, toBankId] = key.split('-').map(Number);
         return {
-          externalBankId: fromBankId === bankId ? toBankId : fromBankId,
-          totalBalance: groupedBalances[key],
+          bankId: fromBankId === bankId ? toBankId : fromBankId,
+          bankName: groupedBalances[key].bankName,
+          totalBalance: groupedBalances[key].amount,
         };
       });
     } else {
@@ -240,8 +292,15 @@ export class TransactionService {
         },
       });
 
+      const bank = await this.prisma.bank.findUnique({
+        where: {
+          bank_id: Number(externalBankId),
+        },
+      });
+
       return {
-        externalBankId: Number(externalBankId),
+        bankId: Number(externalBankId),
+        bankName: bank?.bank_name,
         totalBalance: totalBalance._sum.transaction_amount,
       };
     }
