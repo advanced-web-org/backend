@@ -129,14 +129,6 @@ export class DebtsService {
       action: DebtAction.PAID
     });
 
-    await this.prisma.notification.create({
-      data: {
-        user_id: debt.creditor_id,
-        message: message,
-        created_at: created_at,
-      }
-    });
-
     return { message: 'Debt paid successfully' };
   }
 
@@ -173,14 +165,6 @@ export class DebtsService {
       debtId: debtId,
       timestamp: new Date().toISOString(),
       action: DebtAction.DELETED
-    });
-
-    await this.prisma.notification.create({
-      data: {
-        user_id: userIdToSendNotification,
-        message: message,
-        created_at: created_at,
-      }
     });
 
     return { message: 'Debt deleted successfully' };

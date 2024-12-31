@@ -2,13 +2,15 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { KafkaService } from '../kafka/kafka.service';
 import { DebtNotification } from './types/debt-notification.type';
+import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
 export class NotificationService implements OnModuleInit {
   private io: Server;
 
   constructor(
-    private kafkaService: KafkaService
+    private kafkaService: KafkaService,
+    private prisma: PrismaService,
   ) { }
 
   onModuleInit() {
@@ -34,8 +36,15 @@ export class NotificationService implements OnModuleInit {
     });
   }
 
-  handleDebtNotification(message: DebtNotification) {
+  async handleDebtNotification(message: DebtNotification) {
     const { userIdToSend, ...notification } = message;
+    await this.prisma.notification.create({
+      data: {
+        message: notification.message,
+        user_id: userIdToSend,
+        created_at: notification.timestamp,
+      },
+    });
     this.io.to(String(userIdToSend)).emit('debt-notification', notification);
   }
 }
