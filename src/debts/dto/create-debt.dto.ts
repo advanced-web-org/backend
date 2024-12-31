@@ -12,5 +12,6 @@ export default class CreateDebtDto {
   @Min(0)
   debt_amount: number;
 
+  @IsNotEmpty()
   debt_message?: string;
 }

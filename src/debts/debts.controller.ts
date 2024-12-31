@@ -20,8 +20,8 @@ export class DebtsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createDebt(@Body() createDebtDto: CreateDebtDto) {
-    await this.debtsValidator.checkAccountExistence(createDebtDto.creditor_id, 'Creditor');
-    await this.debtsValidator.checkAccountExistence(createDebtDto.debtor_id, 'Debtor');
+    await this.debtsValidator.checkAccountExistence(+createDebtDto.creditor_id, 'Creditor');
+    await this.debtsValidator.checkAccountExistence(+createDebtDto.debtor_id, 'Debtor');
 
     const createdDebt = await this.debtsService.createDebt(createDebtDto);
     return createdDebt;
@@ -33,9 +33,9 @@ export class DebtsController {
     @Param('creditor_id') creditorId: number,
     @Query('status') status?: debt_status
   ): Promise<Debt[]> {
-    await this.debtsValidator.checkAccountExistence(creditorId, 'Creditor');
+    await this.debtsValidator.checkAccountExistence(+creditorId, 'Creditor');
 
-    return this.debtsService.getCreditorDebts(creditorId, status);
+    return this.debtsService.getCreditorDebts(+creditorId, status);
   }
 
 
@@ -45,9 +45,9 @@ export class DebtsController {
     @Param('debtor_id') debtorId: number,
     @Query('status') status?: debt_status
   ): Promise<Debt[]> {
-    await this.debtsValidator.checkAccountExistence(debtorId, 'Debtor');
+    await this.debtsValidator.checkAccountExistence(+debtorId, 'Debtor');
 
-    return this.debtsService.getDebtorDebts(debtorId, status);
+    return this.debtsService.getDebtorDebts(+debtorId, status);
   }
 
   @Get('/:debt_id/initiate-debt-payment')
@@ -55,7 +55,7 @@ export class DebtsController {
     @Param('debt_id', ParseIntPipe) debtId: number,
     @CurrentUser() user: CurrentUserType
   ) {
-    return this.debtsService.initiatePayment(debtId, parseInt(user.userId));
+    return this.debtsService.initiatePayment(+debtId, parseInt(user.userId));
   }
 
   @Post('/:debt_id/confirm-debt-payment')

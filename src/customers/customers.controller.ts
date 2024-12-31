@@ -36,7 +36,12 @@ export class CustomersController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.customersService.findOne(+id);
+    return this.customersService.getCustomerById(+id);
+  }
+
+  @Get('by-account-number/:accountNumber')
+  getCustomerByAccountNumber(@Param('accountNumber') accountNumber: string) {
+    return this.customersService.getCustomerByAccountNumber(accountNumber);
   }
 
   @Patch(':id')

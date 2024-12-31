@@ -110,15 +110,31 @@ export class DebtsService {
     const debt = await this.prisma.debt.update({
       where: { debt_id: debtId },
       data: { status: debt_status.paid },
+      select: {
+        creditor_id: true,
+        debtor_id: true,
+        debt_amount: true,
+        debtor: true
+      },
     });
 
+    const message = `${debt.debtor.full_name} just paid a debt of ${debt.debt_amount}.`;
+    const created_at = new Date().toISOString();
     // Publish Kafka message to notify the creditor
     await this.kafkaService.produce<DebtNotification>('debt-notifications', {
       userIdToSend: debt.creditor_id,
-      message: `Your debtor has just paid a debt of ${debt.debt_amount}.`,
+      message: message,
       debtId: debtId,
-      timestamp: new Date().toISOString(),
+      timestamp: created_at,
       action: DebtAction.PAID
+    });
+
+    await this.prisma.notification.create({
+      data: {
+        user_id: debt.creditor_id,
+        message: message,
+        created_at: created_at,
+      }
     });
 
     return { message: 'Debt paid successfully' };
@@ -148,13 +164,23 @@ export class DebtsService {
     });
 
     const userIdToSendNotification = this.isCreditor(userId, debt.creditor_id) ? debt.debtor_id : debt.creditor_id;
+    const message = `Your ${this.isCreditor(userId, debt.creditor_id) ? 'creditor' : 'debtor'} has just deleted a debt of ${debt.debt_amount}.`;
+    const created_at = new Date().toISOString();
     // Publish Kafka message to notify the user
     await this.kafkaService.produce<DebtNotification>('debt-notifications', {
       userIdToSend: userIdToSendNotification,
-      message: `Your ${this.isCreditor(userId, debt.creditor_id) ? 'creditor' : 'debtor'} has just deleted a debt of ${debt.debt_amount}.`,
+      message: message,
       debtId: debtId,
       timestamp: new Date().toISOString(),
       action: DebtAction.DELETED
+    });
+
+    await this.prisma.notification.create({
+      data: {
+        user_id: userIdToSendNotification,
+        message: message,
+        created_at: created_at,
+      }
     });
 
     return { message: 'Debt deleted successfully' };

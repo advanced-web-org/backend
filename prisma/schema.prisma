@@ -50,6 +50,7 @@ model Customer {
   debtDeletions DebtDeletion[]
 
   @@map("customers")
+  Notification Notification[]
 }
 
 model Account {
@@ -197,4 +198,16 @@ model OtpSession {
   updated_at DateTime? @updatedAt
 
   @@map("otp_sessions")
+}
+
+model Notification {
+  notification_id Int     @id @default(autoincrement())
+  user_id         Int
+  message         String?
+  created_at      DateTime @default(now())
+
+  // Relations
+  user Customer @relation(fields: [user_id], references: [customer_id])
+
+  @@map("notifications")
 }
