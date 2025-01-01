@@ -13,6 +13,11 @@ export class PartnerController {
 
     // return await this.partnerService.getAccountInfo(bankId, accountNumber, hash, signature);
   }
+
+  @Post('make-transaction')
+  async makeTransaction(@Body() body: MakeTransactionBody) {
+    // return await this.partnerService.makeTransaction(body);
+  }
 }
 
 export interface GetAccountInfoBody {
@@ -22,4 +27,23 @@ export interface GetAccountInfoBody {
     hash: string;
   };
   signature: string;
+}
+
+
+export interface MakeTransactionBody {
+  header: {
+    hashMethod: string;
+  },
+  payload: {
+    fromBankId: string;
+    fromAccountNumber: string;
+    toBankAccountNumber: string;
+    amount: number;
+    message: string;
+    feePayer: string; // sender | receiver
+    feeAmount: number;
+    hash: string;
+  };
+  integrity: string; // hash of the payload
+  signature?: string;
 }
