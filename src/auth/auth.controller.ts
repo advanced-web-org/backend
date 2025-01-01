@@ -1,17 +1,18 @@
 import { Body, Controller, Get, Logger, Post, UseGuards } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { CreateStaffDto } from 'src/staffs/dto/createStaff.dto';
+import { StaffsService } from 'src/staffs/staffs.service';
 import { AuthService } from './auth.service';
+import { CurrentUser } from './decorators/user.decorator';
 import {
   ChangePasswordDto,
   LoginDto,
   RefreshTokenDto,
   RegisterCustomerDto,
 } from './dto';
-import { LocalAuthGuard } from './guards/local.guard';
 import { JwtAuthGuard } from './guards/jwt.guard';
-import { CurrentUser } from './decorators/user.decorator';
-import { CreateStaffDto } from 'src/staffs/dto/createStaff.dto';
-import { StaffsService } from 'src/staffs/staffs.service';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
@@ -21,26 +22,45 @@ export class AuthController {
     private readonly staffService: StaffsService,
   ) {}
 
+  @ApiOperation({ summary: 'Register a customer' })
+  @ApiResponse({
+    status: 201,
+    description: 'Customer registered successfully',
+    schema: {
+      example: {
+        message: 'Customer registered successfully',
+        data: {
+          phone: '1234567890',
+          fullName: 'John Doe',
+          email: 'john.doe@example.com',
+        },
+      },
+    },
+  })
   @Post('register_customer')
   async registerCustomer(@Body() body: RegisterCustomerDto) {
     return this.authService.registerCustomer(body);
   }
 
+  @ApiOperation({ summary: 'Register a staff' })
   @Post('register_staff')
   async registerStaff(@Body() body: CreateStaffDto) {
     return this.authService.registerStaff(body);
   }
 
+  @ApiOperation({ summary: 'Login' })
   @Post('login')
   signin(@Body() body: LoginDto) {
     return this.authService.login(body);
   }
 
+  @ApiOperation({ summary: 'Refresh a new access token' })
   @Post('refresh_token')
   async refreshToken(@Body() body: RefreshTokenDto) {
     return this.authService.refreshToken(body);
   }
 
+  @ApiOperation({ summary: 'Change password' })
   @UseGuards(JwtAuthGuard)
   @Post('change_password')
   async changePassword(
@@ -54,6 +74,7 @@ export class AuthController {
     );
   }
 
+  @ApiOperation({ summary: 'Get current user' })
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async me(@CurrentUser() user: any) {
