@@ -15,11 +15,11 @@ export class RsaGuard implements CanActivate {
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
     const request = context.switchToHttp().getRequest();
-    const { header, payload, integrity, signature } = request.body;
-    const hashMethod = header.hashMethod;
-    const decryptedPayload = this.rsaService.decrypt(payload);
-    const payloadJson = JSON.parse(decryptedPayload);
-    const { fromBankId } = payloadJson;
+    const { data, integrity, signature } = request.body;
+    const decryptedData = JSON.parse(this.rsaService.decrypt(data));
+    const hashMethod = decryptedData.header.hashMethod;
+    const payload = decryptedData.payload;
+    const { fromBankId } = payload;
 
     // check if the bank is registered
     if (!this.rsaService.isBankRegistered(fromBankId)) {
@@ -31,11 +31,8 @@ export class RsaGuard implements CanActivate {
       throw new ForbiddenException('Request is outdated');
     }
 
-    // check if the hahs is valid
-    const dataToHash = JSON.stringify({
-      header,
-      payloadJson,
-    });
+    // check if the hash is valid
+    const dataToHash = JSON.stringify(decryptedData);
     if (!this.rsaService.isHashValid(dataToHash, integrity, hashMethod)) {
       throw new ForbiddenException('Hash is invalid');
     }

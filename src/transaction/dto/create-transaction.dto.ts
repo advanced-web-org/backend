@@ -36,15 +36,18 @@ export class InternalTransactionDto {
   @ApiProperty({ description: 'The fee amount of the transaction' })
   fee_amount: number;
 
-  @ApiProperty({ description: 'The e sign of the transaction' })
-  e_signal?: string;
+  @ApiProperty({ description: 'The request signature of the transaction' })
+  request_signature?: string;
+
+  @ApiProperty({ description: 'The response signature of the transaction' })
+  response_signature?: string;
 }
 
-export class ExternalTransactionDto {
-
+export class NoMeoExternalTransactionDto {
+  
 }
 
 export class CreateTransactionDto {
   type: 'internal' | 'external';
-  data: InternalTransactionDto | ExternalTransactionDto;
+  data: InternalTransactionDto | NoMeoExternalTransactionDto;
 }

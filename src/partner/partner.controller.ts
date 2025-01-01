@@ -1,7 +1,9 @@
-import { BadRequestException, Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { RsaGuard } from 'src/auth/guards/rsa.guard';
 import { PartnerService } from './partner.service';
 
 @Controller('partner')
+@UseGuards(RsaGuard)
 export class PartnerController {
   constructor(
     private readonly partnerService: PartnerService,
@@ -15,8 +17,16 @@ export class PartnerController {
   }
 
   @Post('make-transaction')
-  async makeTransaction(@Body() body: MakeTransactionBody) {
-    // return await this.partnerService.makeTransaction(body);
+  async makeTransaction(@Body() body: {
+    data: string,
+    integrity: string,
+    signature: string,
+  }) {
+    return await this.partnerService.makeTransaction({
+      encryptedData: body.data,
+      integrity: body.integrity,
+      signature: body.signature,
+    })
   }
 }
 
@@ -35,14 +45,15 @@ export interface MakeTransactionBody {
     hashMethod: string;
   },
   payload: {
-    fromBankId: string;
+    fromBankCode: string; // assume that the bank code is bank name in database
     fromAccountNumber: string;
     toBankAccountNumber: string;
     amount: number;
     message: string;
     feePayer: string; // sender | receiver
     feeAmount: number;
+    timestamp: string;
   };
-  integrity: string; // hash of the payload
-  signature?: string;
+  integrity: string; // hash of the payload: sha256(payload + header + secret key)
+  signature?: string; // encrypted hash of the integrity: rsa/pgp(integrity, private key)
 }

@@ -12,6 +12,9 @@ import { OtpService } from 'src/otp/otp.service';
 import { AppMailerService } from 'src/mailer/mailer.service';
 import { CustomersService } from 'src/customers/customers.service';
 import { OtpData } from 'src/otp/types/otp-data.type';
+import { HttpService } from '@nestjs/axios';
+import { BankService } from 'src/bank/bank.service';
+import { RsaService } from 'src/partner/rsa.service';
 
 @Injectable()
 export class TransactionService {
@@ -21,6 +24,9 @@ export class TransactionService {
     private readonly otpService: OtpService,
     private readonly mailerService: AppMailerService,
     private readonly customerService: CustomersService,
+    private readonly rsaService: RsaService,
+    private readonly httpService: HttpService,
+    private readonly bankService: BankService,
   ) {}
 
   async createInternalTransaction(
@@ -405,5 +411,53 @@ export class TransactionService {
       : await this.createExternalTransaction(
           payload.data as ExternalTransactionDto,
         );
+  }
+
+  async makeExternalTransaction(internalTransactionPayload: InternalTransactionDto) {
+    // get bank endpoint by bankId here
+    const bankEndpoint = '';
+
+    const dataToHashJson = {
+      header: {
+        hashMethod: 'sha256',
+      },
+      payload: {
+        fromBankCode: 'Speechless Bank',
+        fromAccountNumber: internalTransactionPayload.from_account_number,
+        toBankAccountNumber: internalTransactionPayload.to_account_number,
+        amount: internalTransactionPayload.transaction_amount,
+        message: internalTransactionPayload.transaction_message,
+        feePayer: internalTransactionPayload.fee_payer,
+        feeAmount: internalTransactionPayload.fee_amount,
+        timestamp: new Date().toISOString(),
+      },
+    }
+
+    const dataToHash = JSON.stringify(dataToHashJson);
+    const integrity = this.rsaService.hashData(dataToHash, dataToHashJson.header.hashMethod);
+    const signature = this.rsaService.createSignature(dataToHash, dataToHashJson.header.hashMethod);
+    const toBank = await this.bankService.getBankById(internalTransactionPayload.to_bank_id);
+    const toBankCode = toBank?.bank_name as string;
+    const encryptedData: string = this.rsaService.encrypt(dataToHash, toBankCode);
+
+    const response = await this.httpService.post(bankEndpoint, {
+      data: encryptedData,
+      integrity,
+      signature,
+    }).toPromise();
+
+    // verify the response signature
+    const isVerified = this.rsaService.verifySignature(response?.data.payload, response?.data.signature, toBankCode);
+    
+    if (!isVerified) {
+      throw new Error('Invalid response signature');
+    }
+
+    // create the transaction
+    internalTransactionPayload.request_signature = signature;
+    internalTransactionPayload.response_signature = response?.data.signature;
+    await this.create(internalTransactionPayload);
+
+    return response?.data;
   }
 }
