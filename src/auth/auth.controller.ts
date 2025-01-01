@@ -1,6 +1,11 @@
 import { Body, Controller, Get, Logger, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { ChangePasswordDto, LoginDto, RefreshTokenDto, RegisterCustomerDto } from './dto';
+import {
+  ChangePasswordDto,
+  LoginDto,
+  RefreshTokenDto,
+  RegisterCustomerDto,
+} from './dto';
 import { LocalAuthGuard } from './guards/local.guard';
 import { JwtAuthGuard } from './guards/jwt.guard';
 import { CurrentUser } from './decorators/user.decorator';
@@ -13,7 +18,7 @@ export class AuthController {
 
   constructor(
     private readonly authService: AuthService,
-    private readonly staffService: StaffsService
+    private readonly staffService: StaffsService,
   ) {}
 
   @Post('register_customer')
@@ -27,7 +32,6 @@ export class AuthController {
   }
 
   @Post('login')
-  @UseGuards(LocalAuthGuard)
   signin(@Body() body: LoginDto) {
     return this.authService.login(body);
   }
@@ -39,17 +43,23 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('change_password')
-  async changePassword(@Body() body: ChangePasswordDto, @CurrentUser() user: any) {
+  async changePassword(
+    @Body() body: ChangePasswordDto,
+    @CurrentUser() user: any,
+  ) {
     return this.authService.changePassword(
       user.username,
       body.oldPassword,
-      body.newPassword
+      body.newPassword,
     );
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async me(@CurrentUser() user: any) {
+    // Parse userId to number
+    user.userId = parseInt(user.userId);
+
     return this.authService.me(user.userId, user.role);
   }
 }

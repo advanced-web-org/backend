@@ -106,7 +106,7 @@ export class TransactionController {
     return this.transactionService.update(+id, updateTransactionDto);
   }
 
-  @Delete(':id')
+  @Post('/delete/:id')
   remove(@Param('id') id: string) {
     return this.transactionService.remove(+id);
   }

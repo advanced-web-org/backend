@@ -44,7 +44,7 @@ export class StaffsService {
     try {
       const staff = await this.prismaService.staff.update({
         where: {
-          username: payload.username,
+          username: username,
         },
         data: {
           ...payload,
