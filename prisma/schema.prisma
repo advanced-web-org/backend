@@ -205,6 +205,7 @@ model Notification {
   user_id         Int
   message         String?
   created_at      DateTime @default(now())
+  is_read         Boolean  @default(false)
 
   // Relations
   user Customer @relation(fields: [user_id], references: [customer_id])

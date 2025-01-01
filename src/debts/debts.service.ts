@@ -19,9 +19,18 @@ export class DebtsService {
   ) { }
 
   async createDebt(createDebtDto: CreateDebtDto) {
-    return this.prisma.debt.create({
+    const createdDebt = await this.prisma.debt.create({
       data: createDebtDto,
     });
+
+    this.kafkaService.produce<DebtNotification>('debt-notifications', {
+      userIdToSend: createDebtDto.debtor_id,
+      message: `You have a new debt reminder of ${createDebtDto.debt_amount} from ${createDebtDto.creditor_id}`,
+      debtId: 1,
+      timestamp: new Date().toISOString(),
+      action: DebtAction.CREATED
+    });
+    return createdDebt;
   }
   private async checkAccountExistence(accountId: number, accountRole: 'Creditor' | 'Debtor') {
     const account = await this.prisma.account.findUnique({ where: { account_id: accountId } });

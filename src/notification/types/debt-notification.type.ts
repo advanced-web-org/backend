@@ -8,5 +8,6 @@ export interface DebtNotification {
 
 export enum DebtAction {
   PAID = 'PAID',
-  DELETED = 'DELETED'
+  DELETED = 'DELETED',
+  CREATED = 'CREATED'
 }
