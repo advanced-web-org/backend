@@ -34,10 +34,7 @@ export class RsaService {
   }
 
   hashData(data: string, hashMethod: string = 'sha256'): string {
-    return crypto
-      .createHmac(hashMethod, this.secretKey)
-      .update(data)
-      .digest('hex');
+    return crypto.createHash(hashMethod).update(data + this.secretKey).digest('hex');
   }
 
   isHashValid(

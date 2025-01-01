@@ -42,7 +42,6 @@ export interface MakeTransactionBody {
     message: string;
     feePayer: string; // sender | receiver
     feeAmount: number;
-    hash: string;
   };
   integrity: string; // hash of the payload
   signature?: string;
