@@ -128,7 +128,7 @@ export class AuthService {
       }
 
       user = {
-        userId: res.staff_id.toString(),
+        id: res.staff_id.toString(),
         username: res.username? res.username : '',
         fullName: res.full_name? res.full_name : '',
         role: res.role == 'admin' ? Role.ADMIN : Role.EMPLOYEE,
@@ -137,7 +137,7 @@ export class AuthService {
       const res = await this.customersService.getCustomerByPhone(username);
 
       user = {
-        userId: res.customer_id,
+        id: res.customer_id,
         username: res.phone,
         email: res.email,
         fullName: res.full_name,
@@ -152,7 +152,7 @@ export class AuthService {
     return {
       message: 'Login successfully',
       data: {
-        userId: user.userId,
+        id: user.id,
         role: user.role,
         fullname: user.fullName,
         email: user.email,
@@ -192,7 +192,7 @@ export class AuthService {
       }
       userRefreshToken = res.refresh_token ?? '';
       user = {
-        userId: res.staff_id.toString(),
+        id: res.staff_id.toString(),
         username: res.username? res.username : '',
         fullName: res.full_name? res.full_name : '',
         role: res.role == 'admin' ? Role.ADMIN : Role.EMPLOYEE,
@@ -201,7 +201,7 @@ export class AuthService {
       const res = await this.customersService.getCustomerByPhone(username);
       userRefreshToken = res.refresh_token;
       user = {
-        userId: res.customer_id,
+        id: res.customer_id,
         username: res.phone,
         email: res.email,
         fullName: res.full_name,
@@ -214,7 +214,7 @@ export class AuthService {
     }
 
     const tokenPayload: IUser = {
-      userId: user.userId,
+      id: user.id,
       username: user.username,
       email: user.email,
       fullName: user.fullName,
@@ -307,7 +307,7 @@ export class AuthService {
     return {
       message: 'User found',
       data: {
-        userId: user.customer_id || user.staff_id,
+        id: user.customer_id || user.staff_id,
         role: user.role,
         fullname: user.full_name,
         email: user.email,
