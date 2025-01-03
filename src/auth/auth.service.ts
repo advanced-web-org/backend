@@ -12,6 +12,9 @@ import { StaffsService } from 'src/staffs/staffs.service';
 import { v4 as uuidv4 } from 'uuid';
 import { LoginDto, RefreshTokenDto, RegisterCustomerDto } from './dto';
 import { IUser, Role, TokenPayload } from './interfaces';
+import { OtpService } from 'src/otp/otp.service';
+import { OtpData } from 'src/otp/types/otp-data.type';
+import { AppMailerService } from 'src/mailer/mailer.service';
 
 @Injectable()
 export class AuthService {
@@ -21,6 +24,8 @@ export class AuthService {
     private readonly customersService: CustomersService,
     private readonly staffsService: StaffsService,
     private readonly jwtService: JwtService,
+    private readonly otpService: OtpService,
+    private readonly mailerService: AppMailerService,
   ) {}
 
   async hashPassword(password: string): Promise<string> {
@@ -316,5 +321,51 @@ export class AuthService {
         account_balance: user.account_balance ?? null,
       },
     };
+  }
+
+  async requestOtpForPasswordReset(username: string) {
+    const user = await this.customersService.getCustomerByPhone(username)
+
+    if (!user) {
+      throw new BadRequestException('Username not found');
+    };
+
+    const { otp, expiresAt }: OtpData = await this.otpService.getOtpData();
+    await this.mailerService.sendOtpEmail(user.email, otp);
+
+    return {
+      otpToken: await this.otpService.getOtpToken({otp, expiresAt}, user.customer_id),
+      message: `OTP sent to your email ${user.email}`
+    }
+  }
+
+  async verifyOtpForPasswordReset(username: string, otp: string, otpToken: string) {
+    const user = await this.customersService.getCustomerByPhone(username);
+
+    if (!user) {
+      throw new BadRequestException('Username not found');
+    }
+
+    await this.otpService.verifyOtpToken(otp, otpToken, user.customer_id);
+
+    return {
+      status: 'success',
+      message: 'OTP verified successfully'
+    }
+  }
+
+  async resetPassword(username: string, newPassword: string) {
+    const user = await this.customersService.getCustomerByPhone(username);
+    if (!user) {
+      throw new BadRequestException('Username not found');
+    }
+    
+    const hashedPassword = await this.hashPassword(newPassword);
+    await this.customersService.updateCustomer(username, { password: hashedPassword });
+
+    return {
+      status: 'success',
+      message: 'Password reset successfully'
+    }
   }
 }

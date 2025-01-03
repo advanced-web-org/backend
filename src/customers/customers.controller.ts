@@ -33,6 +33,12 @@ export class CustomersController {
     return this.prismaService.customer.findMany();
   }
 
+  @ApiOperation({ summary: 'Get customer with account number' })
+  @Get('/account/:accountNumber')
+  findByAccountNumber(@Param('accountNumber') accountNumber: string) {
+    return this.customersService.findByAccountNumber(accountNumber);
+  }
+  
   @ApiOperation({ summary: 'Get all customers with accounts' })
   @Get('with-accounts')
   findAllWithAccounts() {

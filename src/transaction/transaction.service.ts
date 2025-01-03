@@ -1,28 +1,35 @@
-import { Injectable } from '@nestjs/common';
-import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { CreateTransactionDto, ExternalTransactionDto, InternalTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { PrismaService } from 'src/prisma.service';
 import { Prisma, trans_type, Transaction } from '@prisma/client';
 import { AccountsService } from 'src/accounts/accounts.service';
+import { OtpService } from 'src/otp/otp.service';
+import { AppMailerService } from 'src/mailer/mailer.service';
+import { CustomersService } from 'src/customers/customers.service';
+import { OtpData } from 'src/otp/types/otp-data.type';
 
 @Injectable()
 export class TransactionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly accountService: AccountsService,
+    private readonly otpService: OtpService,
+    private readonly mailerService: AppMailerService,
+    private readonly customerService: CustomersService,
   ) {}
 
-  async create(
-    createTransactionDto: CreateTransactionDto,
+  async createInternalTransaction(
+    payload: InternalTransactionDto,
   ): Promise<Transaction> {
     let isDeposit: boolean = false;
 
-    if (createTransactionDto.transaction_type == 'deposit') isDeposit = true;
+    if (payload.transaction_type == 'deposit') isDeposit = true;
 
     // Deposit logic
     if (isDeposit) {
       const toAccount = this.accountService.findOnebyAccountNumber(
-        createTransactionDto.to_account_number,
+        payload.to_account_number,
       );
 
       if (!(await toAccount)) {
@@ -34,23 +41,23 @@ export class TransactionService {
 
       await this.prisma.account.update({
         where: {
-          account_number: createTransactionDto.to_account_number,
+          account_number: payload.to_account_number,
         },
         data: {
           account_balance: new Prisma.Decimal(
             (toAccountData?.account_balance?.toNumber() ?? 0) +
-              Number(createTransactionDto.transaction_amount),
+              Number(payload.transaction_amount),
           ),
         },
       });
 
       return await this.prisma.transaction.create({
         data: {
-          ...createTransactionDto,
+          ...payload,
           transaction_amount: new Prisma.Decimal(
-            createTransactionDto.transaction_amount,
+            payload.transaction_amount,
           ),
-          fee_amount: new Prisma.Decimal(createTransactionDto.fee_amount),
+          fee_amount: new Prisma.Decimal(payload.fee_amount),
         },
       });
     }
@@ -58,52 +65,71 @@ export class TransactionService {
     // Normal transaction logic
     // Check if 2 account valid
     const fromAccount = this.accountService.findOnebyAccountNumber(
-      createTransactionDto.from_account_number ?? '',
+      payload.from_account_number ?? '',
     );
 
     const toAccount = this.accountService.findOnebyAccountNumber(
-      createTransactionDto.to_account_number,
+      payload.to_account_number,
     );
 
     if (!(await fromAccount) || !(await toAccount)) {
-      throw new Error('Account not found');
+      throw new BadRequestException('Account not found');
     }
 
     // Check if the balance is enough
     const fromAccountData = await fromAccount;
+    const toAccountData = await toAccount;
 
     if (
       fromAccountData?.account_balance &&
       fromAccountData.account_balance.toNumber() <
-        createTransactionDto.transaction_amount +
-          createTransactionDto.fee_amount
+      payload.transaction_amount +
+      payload.fee_amount
     ) {
-      throw new Error('Insufficient balance');
+      throw new BadRequestException('Insufficient balance');
     }
 
     // Update the balance
     await this.prisma.account.update({
       where: {
-        account_number: createTransactionDto.from_account_number,
+        account_number: payload.from_account_number,
       },
       data: {
         account_balance: new Prisma.Decimal(
           (fromAccountData?.account_balance?.toNumber() ?? 0) -
-            createTransactionDto.transaction_amount -
-            createTransactionDto.fee_amount,
+          payload.transaction_amount -
+          payload.fee_amount,
         ),
       },
     });
 
+    await this.prisma.account.update({
+      where: {
+        account_number: payload.to_account_number,
+      },
+      data: {
+        account_balance: new Prisma.Decimal(
+          (toAccountData?.account_balance?.toNumber() ?? 0) +
+          payload.transaction_amount,
+        ),
+      },
+    })
+
     return await this.prisma.transaction.create({
       data: {
-        ...createTransactionDto,
+        ...payload,
         transaction_amount: new Prisma.Decimal(
-          createTransactionDto.transaction_amount,
+          payload.transaction_amount,
         ),
-        fee_amount: new Prisma.Decimal(createTransactionDto.fee_amount),
+        fee_amount: new Prisma.Decimal(payload.fee_amount),
       },
     });
+  }
+
+  async createExternalTransaction(
+    payload: ExternalTransactionDto,
+  ) {
+    return `This action adds a new transaction for external`;
   }
 
   async findAll(bankId: number, accountNumber: string) {
@@ -316,5 +342,38 @@ export class TransactionService {
 
   remove(id: number) {
     return `This action removes a #${id} transaction`;
+  }
+
+  async requestOtpForTransaction(userId: number) {
+    const user = await this.customerService.getCustomerById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const { otp, expiresAt }: OtpData = await this.otpService.getOtpData();
+    await this.mailerService.sendOtpEmail(user.email, otp);
+
+    return {
+      otpToken: await this.otpService.getOtpToken({otp, expiresAt}, userId),
+      message: `OTP sent to your email ${user.email}`
+    }
+  }
+
+  async verifyOtpForTransaction(
+    userId: number,
+    otp: string,
+    otpToken: string,
+    payload: CreateTransactionDto
+  ) {
+    const user = await this.customerService.getCustomerById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // await this.otpService.verifyOtpToken(otp, otpToken, userId);
+
+    return payload.type === 'internal' ? 
+      await this.createInternalTransaction(payload.data as InternalTransactionDto) :
+      await this.createExternalTransaction(payload.data as ExternalTransactionDto);
   }
 }
