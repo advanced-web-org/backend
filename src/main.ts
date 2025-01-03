@@ -15,17 +15,27 @@ async function bootstrap() {
   });
 
   const config = new DocumentBuilder()
-    .setTitle('API')
-    .setDescription('API description')
-    .setVersion('1.0')
-    .addTag('API')
+    .setTitle('Speechless Bank')
+    .setDescription('The Speechless Bank API Documentation')
+    .setVersion('2.0.4')
     .build();
-  const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, documentFactory);
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    // forbidNonWhitelisted: true,
-  }));
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+    }),
+  );
 
   await app.listen(process.env.PORT ?? 3000);
 }

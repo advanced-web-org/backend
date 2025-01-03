@@ -7,20 +7,27 @@ import {
   Param,
   Delete,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
-import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { CreateTransactionDto, InternalTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
+import { CurrentUser } from 'src/auth/decorators/user.decorator';
 
+@ApiTags('transactions')
 @Controller('transactions')
 export class TransactionController {
   constructor(private readonly transactionService: TransactionService) {}
 
+  @ApiOperation({ summary: 'Create a transaction' })
   @Post()
   async create(@Body() createTransactionDto: CreateTransactionDto) {
-    return await this.transactionService.create(createTransactionDto);
+    return `This action creates a new transaction`;
   }
 
+  @ApiOperation({ summary: 'Get all transactions' })
   @Get()
   async findAllByCustomer(@Query('type') type: string = 'all') {
     // get the bankId and accountNumber from the auth token
@@ -41,7 +48,8 @@ export class TransactionController {
     );
   }
 
-  @Get('/:AccountId')
+  @ApiOperation({ summary: 'Get all transactions by accountID' })
+  @Get('account/:AccountId')
   async findAllByAccount(
     @Param('AccountId') accountNumber: string,
     @Query('type') type: string = 'all',
@@ -63,6 +71,7 @@ export class TransactionController {
     );
   }
 
+  @ApiOperation({ summary: 'Get all external transactions' })
   @Get('/external')
   async findAllExternal(
     @Query('startDate') startDate: string = '',
@@ -80,6 +89,7 @@ export class TransactionController {
     );
   }
 
+  @ApiOperation({ summary: 'Get all external balance' })
   @Get('/external/balance')
   async findExternalBalance(
     @Query('externalBankId') externalBankId: string = '',
@@ -93,11 +103,13 @@ export class TransactionController {
     );
   }
 
+  @ApiOperation({ summary: 'Get a transaction by ID' })
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.transactionService.findOne(+id);
   }
 
+  @ApiOperation({ summary: 'Update a transaction by ID' })
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -106,8 +118,31 @@ export class TransactionController {
     return this.transactionService.update(+id, updateTransactionDto);
   }
 
+  @ApiOperation({ summary: 'Delete a transaction by ID' })
   @Post('/delete/:id')
   remove(@Param('id') id: string) {
     return this.transactionService.remove(+id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('request_otp')
+  async requestOtp(
+    @CurrentUser() user: any,
+  ) {
+    return this.transactionService.requestOtpForTransaction(user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('verify_otp')
+  async verifyOtp(
+    @CurrentUser() user: any,
+    @Body() body: { otp: string, otpToken: string, transaction: CreateTransactionDto }
+  ) {
+    return this.transactionService.verifyOtpForTransaction(
+      user.userId,
+      body.otp,
+      body.otpToken,
+      body.transaction
+    );
   }
 }

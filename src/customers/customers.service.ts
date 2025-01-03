@@ -1,4 +1,4 @@
-import { BadGatewayException, BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateCustomerDto, UpdateCustomerDto } from './dto';
 import { Customer } from '@prisma/client';
@@ -148,6 +148,30 @@ export class CustomersService {
         },
       },
     });
+  }
+
+  async findByAccountNumber(accountNumber: string) {
+    const account = await this.accountsService.findOnebyAccountNumber(
+      accountNumber,
+    );
+
+    if (!account) {
+      throw new BadRequestException('Account not found');
+    }
+
+    const res = await this.prismaService.customer.findUnique({
+      where: {
+        customer_id: account.customer_id,
+      },
+      select: {
+        full_name: true,
+      }
+    });
+
+    return {
+      fullName: res?.full_name,
+      accountNumber: account.account_number,
+    }
   }
 
   findOne(id: number) {
