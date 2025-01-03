@@ -30,6 +30,8 @@ export class DebtsService {
       timestamp: new Date().toISOString(),
       action: DebtAction.CREATED
     });
+
+    console.log('Debt created successfully and produce kafka message`');
     return createdDebt;
   }
   private async checkAccountExistence(accountId: number, accountRole: 'Creditor' | 'Debtor') {

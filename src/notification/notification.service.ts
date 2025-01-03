@@ -23,48 +23,57 @@ export class NotificationService implements OnModuleInit {
     private kafkaService: KafkaService,
     private prisma: PrismaService,
     private jwt: JwtService
-  ) { }
+  ) {}
 
   onModuleInit() {
-    this.io = new Server<ClientToServerEvents, ServerToClientEvents>(3001, { cors: { origin: '*' } });
+    // Initialize WebSocket Server
+    this.io = new Server<ClientToServerEvents, ServerToClientEvents>(3001, {
+      cors: { origin: '*' },
+    });
 
+    // WebSocket Authentication Middleware
     this.io.use((socket, next) => {
       const token: string = socket.handshake.query.token?.at(0) || '';
-    
       if (!token) {
-        return next(new Error("Authentication error: Token missing"));
+        return next(new Error('Authentication error: Token missing'));
       }
-    
+
       try {
         // const decoded = this.jwt.verify(token, "secret");
-        // socket.data.userId = decoded.userId;
+        // socket.data.userId = decoded.userId; // Attach userId to socket
         next();
       } catch (error) {
-        next(new Error("Authentication error: Invalid token"));
+        next(new Error('Authentication error: Invalid token'));
       }
     });
 
     // Listen for WebSocket connections
     this.io.on('connection', (socket) => {
-      console.log(`User connected: ${socket.data.userId}`);
+      console.log(`Client connected: ${socket.id}`);
 
+      // Handle room joining
       socket.on('join', (userId) => {
-        socket.join(userId); // Join the creditor's room
+        socket.join(String(userId)); // Join room with userId as room name
         console.log(`Client joined room: ${userId}`);
+      });
+
+      socket.on('disconnect', () => {
+        console.log(`Client disconnected: ${socket.id}`);
       });
     });
 
-    // Start consuming Kafka messages
-    this.kafkaService.consume<DebtNotification>('debt-notifications', 'notification-group', (message) => {
-      this.handleDebtNotification(message);
-    });
-    this.kafkaService.consume<DebtNotification>('debt-notifications', 'notification-group', (message) => {
-      this.handleDebtNotification(message);
-    });
+    // Kafka consumer for debt notifications
+    this.kafkaService.consume<DebtNotification>(
+      'debt-notifications',
+      'notification-group',
+      (message) => this.handleDebtNotification(message)
+    );
   }
 
   async handleDebtNotification(message: DebtNotification) {
     const { userIdToSend, ...notification } = message;
+
+    // Save notification to the database
     await this.prisma.notification.create({
       data: {
         message: notification.message,
@@ -72,6 +81,9 @@ export class NotificationService implements OnModuleInit {
         created_at: notification.timestamp,
       },
     });
+
+    // Emit the notification to the specific user
+    console.log(`Notification sent to user: ${userIdToSend}, message: ${notification.message}`);
     this.io.to(String(userIdToSend)).emit('debtNotifications', notification);
   }
 
@@ -80,7 +92,7 @@ export class NotificationService implements OnModuleInit {
       where: { user_id: userId },
       orderBy: { created_at: 'desc' },
     });
-  } 
+  }
 
   async markAsRead(notificationId: number) {
     return this.prisma.notification.update({
