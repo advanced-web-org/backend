@@ -13,8 +13,7 @@ import {
 } from '@nestjs/common';
 import { DebtsService } from './debts.service';
 import CreateDebtDto from './dto/create-debt.dto';
-import { DebtStatus } from './enum/debt-status.enum';
-import { Debt } from '@prisma/client';
+import { Debt, debt_status } from '@prisma/client';
 import DebtsValidator from './validator/debts.validator';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { CurrentUser } from 'src/auth/decorators/user.decorator';
@@ -35,14 +34,8 @@ export class DebtsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createDebt(@Body() createDebtDto: CreateDebtDto) {
-    await this.debtsValidator.checkAccountExistence(
-      createDebtDto.creditor_id,
-      'Creditor',
-    );
-    await this.debtsValidator.checkAccountExistence(
-      createDebtDto.debtor_id,
-      'Debtor',
-    );
+    await this.debtsValidator.checkAccountExistence(+createDebtDto.creditor_id, 'Creditor');
+    await this.debtsValidator.checkAccountExistence(+createDebtDto.debtor_id, 'Debtor');
 
     const createdDebt = await this.debtsService.createDebt(createDebtDto);
     return createdDebt;
@@ -53,11 +46,11 @@ export class DebtsController {
   @HttpCode(HttpStatus.OK)
   async getCreditorDebts(
     @Param('creditor_id') creditorId: number,
-    @Query('status') status?: DebtStatus,
+    @Query('status') status?: debt_status
   ): Promise<Debt[]> {
-    await this.debtsValidator.checkAccountExistence(creditorId, 'Creditor');
+    await this.debtsValidator.checkAccountExistence(+creditorId, 'Creditor');
 
-    return this.debtsService.getCreditorDebts(creditorId, status);
+    return this.debtsService.getCreditorDebts(+creditorId, status);
   }
 
   @ApiOperation({ summary: 'Get debtor debt by ID' })
@@ -65,11 +58,11 @@ export class DebtsController {
   @HttpCode(HttpStatus.OK)
   async getDebtorDebts(
     @Param('debtor_id') debtorId: number,
-    @Query('status') status?: DebtStatus,
+    @Query('status') status?: debt_status
   ): Promise<Debt[]> {
-    await this.debtsValidator.checkAccountExistence(debtorId, 'Debtor');
+    await this.debtsValidator.checkAccountExistence(+debtorId, 'Debtor');
 
-    return this.debtsService.getDebtorDebts(debtorId, status);
+    return this.debtsService.getDebtorDebts(+debtorId, status);
   }
 
   @ApiOperation({ summary: 'Get debt payment of a debt by ID' })
@@ -78,7 +71,7 @@ export class DebtsController {
     @Param('debt_id', ParseIntPipe) debtId: number,
     @CurrentUser() user: CurrentUserType,
   ) {
-    return this.debtsService.initiatePayment(debtId, parseInt(user.userId));
+    return this.debtsService.initiatePayment(+debtId, parseInt(user.userId));
   }
 
   @ApiOperation({ summary: 'Confirm debt (find by ID) payment' })

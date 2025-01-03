@@ -9,7 +9,7 @@ export enum Role {
 };
 
 export type IUser = {
-  userId: string;
+  id: string;
   username: string;
   email?: string;
   fullName?: string;

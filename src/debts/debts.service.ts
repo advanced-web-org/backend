@@ -1,13 +1,13 @@
 import { BadRequestException, InternalServerErrorException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import CreateDebtDto from './dto/create-debt.dto';
-import { DebtStatus } from './enum/debt-status.enum';
 import { OtpService } from 'src/otp/otp.service';
 import { AppMailerService } from 'src/mailer/mailer.service';
 import { assert } from 'console';
 import { KafkaService } from 'src/kafka/kafka.service';
 import { DebtAction, DebtNotification } from 'src/notification/types/debt-notification.type';
 import { OtpData } from 'src/otp/types/otp-data.type';
+import { Debt, debt_status } from '@prisma/client';
 
 @Injectable()
 export class DebtsService {
@@ -19,9 +19,20 @@ export class DebtsService {
   ) { }
 
   async createDebt(createDebtDto: CreateDebtDto) {
-    return this.prisma.debt.create({
+    const createdDebt = await this.prisma.debt.create({
       data: createDebtDto,
     });
+
+    this.kafkaService.produce<DebtNotification>('debt-notifications', {
+      userIdToSend: createDebtDto.debtor_id,
+      message: `You have a new debt reminder of ${createDebtDto.debt_amount} from ${createDebtDto.creditor_id}`,
+      debtId: 1,
+      timestamp: new Date().toISOString(),
+      action: DebtAction.CREATED
+    });
+
+    console.log('Debt created successfully and produce kafka message`');
+    return createdDebt;
   }
   private async checkAccountExistence(accountId: number, accountRole: 'Creditor' | 'Debtor') {
     const account = await this.prisma.account.findUnique({ where: { account_id: accountId } });
@@ -31,24 +42,45 @@ export class DebtsService {
     return account;
   }
 
-  async getCreditorDebts(creditorId: number, status?: DebtStatus) {
-    const where: { creditor_id: number; status?: DebtStatus } = { creditor_id: creditorId };
+  async getCreditorDebts(creditorId: number, status?: debt_status): Promise<Debt[]> {
+    const where: { creditor_id: number; status?: debt_status } = { creditor_id: creditorId };
   
-    if (status !== undefined) {
+    if (status) {
       where.status = status;
     }
   
-    return this.prisma.debt.findMany({ where });
+    return await this.getDebts(where);
   }
   
-  async getDebtorDebts(debtorId: number, status?: DebtStatus) {
-    const where: { debtor_id: number; status?: DebtStatus } = { debtor_id: debtorId };
+  async getDebtorDebts(debtorId: number, status?: debt_status): Promise<Debt[]> {
+    const where: { debtor_id: number; status?: debt_status } = { debtor_id: debtorId };
   
-    if (status !== undefined) {
+    if (status) {
       where.status = status;
     }
   
-    return this.prisma.debt.findMany({ where });
+    return await this.getDebts(where);
+  }
+  
+
+  private async getDebts(where: any): Promise<Debt[]> {
+    return await this.prisma.debt.findMany({
+      where,
+      include: {
+        creditor: {
+          select: {
+            customer_id: true,
+            full_name: true,
+          },
+        },
+        debtor: {
+          select: {
+            customer_id: true,
+            full_name: true,
+          },
+        },
+      },
+    });
   }
   
   async initiatePayment(debtId: number, userId: number) {
@@ -88,15 +120,23 @@ export class DebtsService {
 
     const debt = await this.prisma.debt.update({
       where: { debt_id: debtId },
-      data: { status: DebtStatus.paid },
+      data: { status: debt_status.paid },
+      select: {
+        creditor_id: true,
+        debtor_id: true,
+        debt_amount: true,
+        debtor: true
+      },
     });
 
+    const message = `${debt.debtor.full_name} just paid a debt of ${debt.debt_amount}.`;
+    const created_at = new Date().toISOString();
     // Publish Kafka message to notify the creditor
     await this.kafkaService.produce<DebtNotification>('debt-notifications', {
       userIdToSend: debt.creditor_id,
-      message: `Your debtor has just paid a debt of ${debt.debt_amount}.`,
+      message: message,
       debtId: debtId,
-      timestamp: new Date().toISOString(),
+      timestamp: created_at,
       action: DebtAction.PAID
     });
 
@@ -113,24 +153,26 @@ export class DebtsService {
       throw new BadRequestException('You are not authorized to delete this debt');
     }
 
-    if (debt.status === DebtStatus.deleted) {
+    if (debt.status === debt_status.deleted) {
       throw new BadRequestException('Debt has already been deleted');
     }
 
-    if (debt.status === DebtStatus.paid) {
+    if (debt.status === debt_status.paid) {
       throw new BadRequestException('Debt has already been paid');
     }
 
     await this.prisma.debt.update({
       where: { debt_id: debtId },
-      data: { status: DebtStatus.deleted },
+      data: { status: debt_status.deleted },
     });
 
     const userIdToSendNotification = this.isCreditor(userId, debt.creditor_id) ? debt.debtor_id : debt.creditor_id;
+    const message = `Your ${this.isCreditor(userId, debt.creditor_id) ? 'creditor' : 'debtor'} has just deleted a debt of ${debt.debt_amount}.`;
+    const created_at = new Date().toISOString();
     // Publish Kafka message to notify the user
     await this.kafkaService.produce<DebtNotification>('debt-notifications', {
       userIdToSend: userIdToSendNotification,
-      message: `Your ${this.isCreditor(userId, debt.creditor_id) ? 'creditor' : 'debtor'} has just deleted a debt of ${debt.debt_amount}.`,
+      message: message,
       debtId: debtId,
       timestamp: new Date().toISOString(),
       action: DebtAction.DELETED

@@ -11,7 +11,7 @@ export class CustomersService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly accountsService: AccountsService,
-  ) {}
+  ) { }
 
   async isCustomerExist(phone: string): Promise<boolean> {
     try {
@@ -64,6 +64,28 @@ export class CustomersService {
       this.logger.error(error.message);
       throw new Error(error?.message || 'Something went wrong');
     }
+  }
+
+  async getCustomerByAccountNumber(accountNumber: string): Promise<any> {
+    // only get full name
+    const customer = await this.prismaService.customer.findFirst({
+      where: {
+        accounts: {
+          some: {
+            account_number: accountNumber,
+          },
+        },
+      },
+      select: {
+        full_name: true,
+        customer_id: true,
+      },
+    });
+
+    if (!customer) {
+      throw new BadRequestException('Customer not found');
+    }
+    return customer;
   }
 
   async getCustomerById(id: number): Promise<any> {

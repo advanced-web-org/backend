@@ -48,7 +48,12 @@ export class CustomersController {
   @ApiOperation({ summary: 'Get a customer by ID' })
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.customersService.findOne(+id);
+    return this.customersService.getCustomerById(+id);
+  }
+
+  @Get('by-account-number/:accountNumber')
+  getCustomerByAccountNumber(@Param('accountNumber') accountNumber: string) {
+    return this.customersService.getCustomerByAccountNumber(accountNumber);
   }
 
   @ApiOperation({ summary: 'Update a customer by ID' })

@@ -18,5 +18,6 @@ export default class CreateDebtDto {
   debt_amount: number;
 
   @ApiProperty({ description: 'The debt message' })
+  @IsNotEmpty()
   debt_message?: string;
 }
