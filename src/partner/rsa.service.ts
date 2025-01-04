@@ -175,6 +175,38 @@ export class RsaService {
     }
   }
 
+  publicDecrypt(encryptedData: string, publicKey: string): string {
+    if (!encryptedData) {
+      throw new BadRequestException('Encrypted data is required');
+    }
+
+    try {
+      const buffer = Buffer.from(encryptedData, 'base64');
+      const decrypted = crypto.publicDecrypt(publicKey, buffer);
+      return decrypted.toString();
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Decryption failed: ${error.message}`,
+      );
+    }
+  }
+
+  privateEncrypt(data: string): string {
+    if (!data) {
+      throw new BadRequestException('Data to encrypt is required');
+    }
+
+    try {
+      const buffer = Buffer.from(data);
+      const encrypted = crypto.privateEncrypt(this.privateKey, buffer);
+      return encrypted.toString('base64');
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Encryption failed: ${error.message}`,
+      );
+    }
+  }
+
   generateSampleRequestFromOpponent(data: any): object {
     const myBankCode = 'Bank A'; // Your bank's code
     const opponentBankCode = 'Bank B'; // Opponent bank's code
@@ -378,4 +410,5 @@ async function verifyResponse() {
   console.log('Timestamp Freshness:', isFresh);
 }
 
-verifyResponse();
+// verifyResponse();
+// generateSampleRequestFromOpponent();

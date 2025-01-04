@@ -431,11 +431,15 @@ export class TransactionService {
         },
         data: {
           account_balance: {
-            increment: createTransactionDto.transaction_amount,
+            increment:
+              createTransactionDto.transaction_amount -
+              (createTransactionDto.fee_payer === 'to'
+                ? createTransactionDto.fee_amount
+                : 0),
           },
         },
       });
-    
+
       // Create the transaction
       await transactionalPrisma.transaction.create({
         data: {
@@ -449,56 +453,75 @@ export class TransactionService {
     });
   }
 
-  async makeOutboundTransaction(createTransactionDto: CreateTransactionDto) {
-    // get bank endpoint by bankId here
-    const bankEndpoint = '';
-
-    const dataToHashJson = {
-      header: {
-        hashMethod: 'sha256',
-      },
-      payload: {
-        fromBankCode: 'Speechless Bank',
-        fromAccountNumber: createTransactionDto.from_account_number,
-        toBankAccountNumber: createTransactionDto.to_account_number,
-        amount: createTransactionDto.transaction_amount,
-        message: createTransactionDto.transaction_message,
-        feePayer: createTransactionDto.fee_payer,
-        feeAmount: createTransactionDto.fee_amount,
-        timestamp: new Date().toISOString(),
-      },
-    };
-
-    const dataToHash = JSON.stringify(dataToHashJson);
-    const integrity = this.rsaService.hashData(
-      dataToHash,
-      dataToHashJson.header.hashMethod,
-    );
-    const signature = this.rsaService.createSignature(
-      dataToHash,
-      dataToHashJson.header.hashMethod,
-    );
-    const toBank = await this.bankService.getBankById(
+  // Nomeo bank
+  async handleOutboundTransaction(createTransactionDto: CreateTransactionDto) {
+    const bankEndpoint =
+      'https://nomeobank.onrender.com/transactions/external/receive';
+    const toBank = await this.bankService.findOne(
       createTransactionDto.to_bank_id,
     );
-    const toBankCode = toBank?.bank_name as string;
-    const encryptedData: string = this.rsaService.encrypt(
-      dataToHash,
+    if (!toBank) {
+      throw new Error('Bank not found');
+    }
+
+    const toBankCode = toBank.bank_name;
+    if (!toBankCode) {
+      throw new Error('Bank code not found');
+    }
+
+    const requestPayload = {
+      sender_account_number: createTransactionDto.from_account_number,
+      recicpient_account_number: createTransactionDto.to_account_number,
+      transaction_amount: createTransactionDto.transaction_amount,
+      transaction_message: createTransactionDto.transaction_message,
+      fee_payment_method:
+        createTransactionDto.fee_payer === 'from' ? 'SENDER' : 'RECIPIENT',
+      fee_amount: createTransactionDto.fee_amount,
+    };
+
+    const encryptedPayload = this.rsaService.encrypt(
+      JSON.stringify(requestPayload),
       toBankCode,
     );
 
+    const hashPayload = this.rsaService.hashData(
+      JSON.stringify(requestPayload),
+      'sha256',
+    );
+
+    const timestamp = new Date().toISOString();
+
+    const signature = this.rsaService.createSignature(
+      encryptedPayload + timestamp,
+      'sha256',
+    );
+
+    const request = {
+      timestamp,
+      signature,
+      hashPayload,
+      encryptedPayload,
+    };
+
     const response = await this.httpService
-      .post(bankEndpoint, {
-        data: encryptedData,
-        integrity,
-        signature,
-      })
+      .post(bankEndpoint, request)
       .toPromise();
+
+    const message = response!.data.message;
+
+    if (message !== 'Transaction created successfully') {
+      throw new Error('Transaction failed');
+    }
+
+    const encryptedData = response!.data.data.encryptData;
+    const responseSignature = response!.data.data.signature;
+    const decryptedData = this.rsaService.decrypt(encryptedData);
+    const responseData = JSON.parse(decryptedData);
 
     // verify the response signature
     const isVerified = this.rsaService.verifySignature(
-      response?.data.payload,
-      response?.data.signature,
+      decryptedData,
+      responseSignature,
       toBankCode,
     );
 
@@ -506,11 +529,59 @@ export class TransactionService {
       throw new Error('Invalid response signature');
     }
 
-    // create the transaction
     createTransactionDto.request_signature = signature;
-    createTransactionDto.response_signature = response?.data.signature;
-    await this.create(createTransactionDto);
+    createTransactionDto.response_signature = responseSignature;
 
-    return response?.data;
+    // check if the from account exists
+    const fromAccount = await this.accountService.findOnebyAccountNumber(
+      createTransactionDto.from_account_number ?? '',
+    );
+
+    if (!fromAccount) {
+      throw new Error('Source account not found');
+    }
+
+    await this.prisma.$transaction(async (transactionalPrisma) => {
+      // Update the balance
+      await transactionalPrisma.account.update({
+        where: {
+          account_number: createTransactionDto.from_account_number,
+        },
+        data: {
+          account_balance: {
+            decrement:
+              createTransactionDto.transaction_amount +
+              (createTransactionDto.fee_payer === 'from'
+                ? createTransactionDto.fee_amount
+                : 0),
+          },
+        },
+      });
+
+      // Create the transaction
+      await transactionalPrisma.transaction.create({
+        data: {
+          ...createTransactionDto,
+          transaction_amount: new Prisma.Decimal(
+            createTransactionDto.transaction_amount,
+          ),
+          fee_amount: new Prisma.Decimal(createTransactionDto.fee_amount),
+        },
+      });
+    });
   }
+}
+
+// Nomeo bank request
+export interface NomeoBankRequestPayload {
+  timestamp: string;
+  signature: string;
+  hashPayload: string;
+  payload: {
+    sender_account_number: string;
+    recicpient_account_number: string;
+    transaction_amount: string;
+    transaction_message: string;
+    fee_payment_method: string;
+  };
 }

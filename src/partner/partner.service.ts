@@ -98,6 +98,7 @@ export class PartnerService {
     if (!fromBank) throw new BadRequestException('From bank not found.');
 
     const responsePayload = {
+      statuscode: 200,
       message: 'Transaction successful',
       timestamp: Date.now(),
     };
