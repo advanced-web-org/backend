@@ -15,24 +15,26 @@ export class RsaGuard implements CanActivate {
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
     const request = context.switchToHttp().getRequest();
-    const { data, integrity, signature } = request.body;
-    const decryptedData = JSON.parse(this.rsaService.decrypt(data));
-    const hashMethod = decryptedData.header.hashMethod;
-    const payload = decryptedData.payload;
-    const { fromBankId } = payload;
+    const { header, encryptedPayload, integrity, signature } = request.body;
+    const payload = JSON.parse(this.rsaService.decrypt(encryptedPayload));
+    const hashMethod = header.hashMethod;
+    const { fromBankCode } = payload;
+
+
+    console.log('PAYLOAD:', payload);
 
     // check if the bank is registered
-    if (!this.rsaService.isBankRegistered(fromBankId)) {
+    if (!this.rsaService.isBankRegistered(fromBankCode)) {
       throw new ForbiddenException('Bank is not registered');
     }
 
     // check if the request is fresh
-    if (!this.rsaService.isRequestFresh(payload.timestamp)) {
+    if (!this.rsaService.isRequestFresh(header.timestamp)) {
       throw new ForbiddenException('Request is outdated');
     }
 
     // check if the hash is valid
-    const dataToHash = JSON.stringify(decryptedData);
+    const dataToHash = JSON.stringify(header) + encryptedPayload;
     if (!this.rsaService.isHashValid(dataToHash, integrity, hashMethod)) {
       throw new ForbiddenException('Hash is invalid');
     }
@@ -43,7 +45,7 @@ export class RsaGuard implements CanActivate {
         !this.rsaService.verifySignature(
           dataToHash,
           signature,
-          fromBankId,
+          fromBankCode,
           hashMethod,
         )
       ) {

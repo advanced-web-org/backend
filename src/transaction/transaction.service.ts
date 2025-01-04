@@ -413,7 +413,43 @@ export class TransactionService {
         );
   }
 
-  async makeExternalTransaction(internalTransactionPayload: InternalTransactionDto) {
+  async handleInboundTransaction(createTransactionDto: CreateTransactionDto) {
+    // check if the to account exists
+    const toAccount = await this.accountService.findOnebyAccountNumber(
+      createTransactionDto.to_account_number,
+    );
+
+    if (!toAccount) {
+      throw new Error('Destination account not found');
+    }
+
+    await this.prisma.$transaction(async (transactionalPrisma) => {
+      // Update the balance
+      await transactionalPrisma.account.update({
+        where: {
+          account_number: createTransactionDto.to_account_number,
+        },
+        data: {
+          account_balance: {
+            increment: createTransactionDto.transaction_amount,
+          },
+        },
+      });
+    
+      // Create the transaction
+      await transactionalPrisma.transaction.create({
+        data: {
+          ...createTransactionDto,
+          transaction_amount: new Prisma.Decimal(
+            createTransactionDto.transaction_amount,
+          ),
+          fee_amount: new Prisma.Decimal(createTransactionDto.fee_amount),
+        },
+      });
+    });
+  }
+
+  async makeOutboundTransaction(createTransactionDto: CreateTransactionDto) {
     // get bank endpoint by bankId here
     const bankEndpoint = '';
 
@@ -423,40 +459,57 @@ export class TransactionService {
       },
       payload: {
         fromBankCode: 'Speechless Bank',
-        fromAccountNumber: internalTransactionPayload.from_account_number,
-        toBankAccountNumber: internalTransactionPayload.to_account_number,
-        amount: internalTransactionPayload.transaction_amount,
-        message: internalTransactionPayload.transaction_message,
-        feePayer: internalTransactionPayload.fee_payer,
-        feeAmount: internalTransactionPayload.fee_amount,
+        fromAccountNumber: createTransactionDto.from_account_number,
+        toBankAccountNumber: createTransactionDto.to_account_number,
+        amount: createTransactionDto.transaction_amount,
+        message: createTransactionDto.transaction_message,
+        feePayer: createTransactionDto.fee_payer,
+        feeAmount: createTransactionDto.fee_amount,
         timestamp: new Date().toISOString(),
       },
-    }
+    };
 
     const dataToHash = JSON.stringify(dataToHashJson);
-    const integrity = this.rsaService.hashData(dataToHash, dataToHashJson.header.hashMethod);
-    const signature = this.rsaService.createSignature(dataToHash, dataToHashJson.header.hashMethod);
-    const toBank = await this.bankService.getBankById(internalTransactionPayload.to_bank_id);
+    const integrity = this.rsaService.hashData(
+      dataToHash,
+      dataToHashJson.header.hashMethod,
+    );
+    const signature = this.rsaService.createSignature(
+      dataToHash,
+      dataToHashJson.header.hashMethod,
+    );
+    const toBank = await this.bankService.getBankById(
+      createTransactionDto.to_bank_id,
+    );
     const toBankCode = toBank?.bank_name as string;
-    const encryptedData: string = this.rsaService.encrypt(dataToHash, toBankCode);
+    const encryptedData: string = this.rsaService.encrypt(
+      dataToHash,
+      toBankCode,
+    );
 
-    const response = await this.httpService.post(bankEndpoint, {
-      data: encryptedData,
-      integrity,
-      signature,
-    }).toPromise();
+    const response = await this.httpService
+      .post(bankEndpoint, {
+        data: encryptedData,
+        integrity,
+        signature,
+      })
+      .toPromise();
 
     // verify the response signature
-    const isVerified = this.rsaService.verifySignature(response?.data.payload, response?.data.signature, toBankCode);
-    
+    const isVerified = this.rsaService.verifySignature(
+      response?.data.payload,
+      response?.data.signature,
+      toBankCode,
+    );
+
     if (!isVerified) {
       throw new Error('Invalid response signature');
     }
 
     // create the transaction
-    internalTransactionPayload.request_signature = signature;
-    internalTransactionPayload.response_signature = response?.data.signature;
-    await this.create(internalTransactionPayload);
+    createTransactionDto.request_signature = signature;
+    createTransactionDto.response_signature = response?.data.signature;
+    await this.create(createTransactionDto);
 
     return response?.data;
   }

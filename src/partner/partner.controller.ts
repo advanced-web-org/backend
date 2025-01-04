@@ -16,14 +16,19 @@ export class PartnerController {
     // return await this.partnerService.getAccountInfo(bankId, accountNumber, hash, signature);
   }
 
-  @Post('make-transaction')
+  @Post('transaction')
   async makeTransaction(@Body() body: {
-    data: string,
+    header: {
+      hashMethod: string,
+      timestamp: string,
+    },
+    encryptedPayload: string,
     integrity: string,
     signature: string,
   }) {
     return await this.partnerService.makeTransaction({
-      encryptedData: body.data,
+      header: body.header,
+      encryptedPayload: body.encryptedPayload,
       integrity: body.integrity,
       signature: body.signature,
     })
@@ -43,6 +48,7 @@ export interface GetAccountInfoBody {
 export interface MakeTransactionBody {
   header: {
     hashMethod: string;
+    timestamp: string;
   },
   payload: {
     fromBankCode: string; // assume that the bank code is bank name in database
@@ -52,7 +58,6 @@ export interface MakeTransactionBody {
     message: string;
     feePayer: string; // sender | receiver
     feeAmount: number;
-    timestamp: string;
   };
   integrity: string; // hash of the payload: sha256(payload + header + secret key)
   signature?: string; // encrypted hash of the integrity: rsa/pgp(integrity, private key)

@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, trans_type } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { hashData } from './pgp.utils';
 import { TransactionService } from 'src/transaction/transaction.service';
@@ -68,22 +68,22 @@ export class PartnerService {
   // }
 
   async makeTransaction({
-    encryptedData,
+    header,
+    encryptedPayload,
     integrity,
     signature,
   }: {
-    encryptedData: string;
+    header: {
+      hashMethod: string;
+      timestamp: string;
+    }
+    encryptedPayload: string;
     integrity: string;
     signature: string;
   }) {
-    const decryptedData = JSON.parse(this.rsaService.decrypt(encryptedData));
-    const header = decryptedData.header;
-    const payload = decryptedData.payload;
-
-    if (
-      !this.rsaService.isHashValid(decryptedData, integrity, header.hashMethod)
-    )
-      throw new BadRequestException('Integrity check failed.');
+    console.log('EncryptedPayload', encryptedPayload);
+    const bankId = process.env.BANK_ID;
+    const payload = JSON.parse(this.rsaService.decrypt(encryptedPayload));
 
     const {
       fromBankCode,
@@ -118,19 +118,21 @@ export class PartnerService {
       fromBankCode,
     );
 
-    await this.transactionService.create({
+    const createBankDto = {
       from_bank_id: fromBank.bank_id,
       from_account_number: fromAccountNumber,
-      to_bank_id: 1,
+      to_bank_id: Number(bankId),
       to_account_number: toBankAccountNumber,
-      transaction_type: 'transaction',
+      transaction_type: 'transaction' as trans_type,
       transaction_amount: Number(amount),
       transaction_message: message,
       fee_payer: feePayer,
       fee_amount: feeAmount,
       request_signature: signature,
       response_signature: responseSignature,
-    });
+    }
+
+    await this.transactionService.handleInboundTransaction(createBankDto);
 
     return {
       data: encryptedResponse,
