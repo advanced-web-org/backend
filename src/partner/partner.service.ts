@@ -81,7 +81,6 @@ export class PartnerService {
     integrity: string;
     signature: string;
   }) {
-    console.log('EncryptedPayload', encryptedPayload);
     const bankId = process.env.BANK_ID;
     const payload = JSON.parse(this.rsaService.decrypt(encryptedPayload));
 
@@ -99,12 +98,11 @@ export class PartnerService {
     if (!fromBank) throw new BadRequestException('From bank not found.');
 
     const responsePayload = {
-      status: 'success',
       message: 'Transaction successful',
       timestamp: Date.now(),
     };
 
-    const responseData = JSON.stringify({ header, payload: responsePayload });
+    const responseData = JSON.stringify(responsePayload);
     const responseIntegrity = this.rsaService.hashData(
       responseData,
       header.hashMethod,
