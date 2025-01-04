@@ -8,6 +8,7 @@ import { KafkaService } from 'src/kafka/kafka.service';
 import { DebtNotification } from 'src/notification/types/debt-notification.type';
 import { OtpData } from 'src/otp/types/otp-data.type';
 import { Debt, debt_status } from '@prisma/client';
+import { numberToCurrency } from './utils/currency.utils';
 
 export enum DebtAction {
   PAID = 'PAID',
@@ -41,7 +42,7 @@ export class DebtsService {
 
     this.kafkaService.produce<DebtKafkaMessage>('debt-notifications', {
       userIdToSend: createDebtDto.debtor_id,
-      message: `You have a new debt reminder of ${createDebtDto.debt_amount}$ from ${creditor?.full_name}`,
+      message: `You have a new debt reminder of ${numberToCurrency(createDebtDto.debt_amount)} from ${creditor?.full_name}`,
       userMessage: createDebtDto.debt_message,
       debtId: 1,
       timestamp: new Date().toISOString(),
@@ -149,7 +150,7 @@ export class DebtsService {
       },
     });
 
-    const message = `${debt.debtor.full_name} just paid a debt of ${debt.debt_amount}.`;
+    const message = `${debt.debtor.full_name} just paid a debt of ${numberToCurrency(Number(debt.debt_amount))}.`;
     const created_at = new Date().toISOString();
     // Publish Kafka message to notify the creditor
     await this.kafkaService.produce<DebtKafkaMessage>('debt-notifications', {
@@ -188,7 +189,7 @@ export class DebtsService {
     });
 
     const userIdToSendNotification = this.isCreditor(userId, debt.creditor_id) ? debt.debtor_id : debt.creditor_id;
-    const message = `Your ${this.isCreditor(userId, debt.creditor_id) ? 'creditor' : 'debtor'} has just deleted a debt of ${debt.debt_amount}.`;
+    const message = `Your ${this.isCreditor(userId, debt.creditor_id) ? 'creditor' : 'debtor'} has just deleted a debt of ${numberToCurrency(Number(debt.debt_amount))}.`;
     const created_at = new Date().toISOString();
     // Publish Kafka message to notify the user
     await this.kafkaService.produce<DebtKafkaMessage>('debt-notifications', {
