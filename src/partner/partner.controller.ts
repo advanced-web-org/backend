@@ -1,35 +1,46 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Req,
+  SetMetadata,
+  UseGuards,
+} from '@nestjs/common';
 import { RsaGuard } from 'src/auth/guards/rsa.guard';
+import { AccountInfoDto, AccountInfoPayloadDto } from './dto/account-info.dto';
+import {
+  TransactionBodyDto,
+  TransactionPayloadDto,
+} from './dto/inbound-transaction.dto';
+import { InboundRequestDto } from './dto/request.dto';
 import { PartnerService } from './partner.service';
-import { AccountInfoDto } from './dto/account-info.dto';
 
 @Controller('partner')
 @UseGuards(RsaGuard)
 export class PartnerController {
-  constructor(
-    private readonly partnerService: PartnerService,
-  ) { }
-  
+  constructor(private readonly partnerService: PartnerService) {}
+
   @Post('get-account-info')
-  async getAccountInfo(@Body() body: AccountInfoDto) {
-    return await this.partnerService.getAccountInfo(body.payload.accountNumber);
+  @SetMetadata('dto', AccountInfoPayloadDto)
+  async getAccountInfo(@Body() body: InboundRequestDto, @Req() req: any) {
+    const decryptedPayload = req.decryptedPayload as AccountInfoPayloadDto;
+    const encryptedBody: AccountInfoDto = {
+      header: body.header,
+      payload: decryptedPayload,
+      integrity: body.integrity,
+    };
+    return await this.partnerService.getAccountInfo(encryptedBody);
   }
 
   @Post('transaction')
-  async makeTransaction(@Body() body: {
-    header: {
-      hashMethod: string,
-      timestamp: string,
-    },
-    encryptedPayload: string,
-    integrity: string,
-    signature: string,
-  }) {
-    return await this.partnerService.makeTransaction({
+  @SetMetadata('dto', TransactionPayloadDto)
+  async makeTransaction(@Body() body: InboundRequestDto, @Req() req: any) {
+    const encryptedBody: TransactionBodyDto = {
       header: body.header,
-      encryptedPayload: body.encryptedPayload,
+      payload: req.decryptedPayload as TransactionPayloadDto,
       integrity: body.integrity,
       signature: body.signature,
-    })
+    };
+    return await this.partnerService.makeTransaction(encryptedBody);
   }
 }

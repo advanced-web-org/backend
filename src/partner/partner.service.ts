@@ -1,79 +1,74 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Account, Prisma, trans_type } from '@prisma/client';
-import { PrismaService } from 'src/prisma.service';
-import { hashData } from './pgp.utils';
-import { TransactionService } from 'src/transaction/transaction.service';
-import { CreateTransactionDto } from 'src/transaction/dto/create-transaction.dto';
-import { BankService } from 'src/bank/bank.service';
-import { RsaService } from './rsa.service';
+import { trans_type } from '@prisma/client';
 import { AccountsService } from 'src/accounts/accounts.service';
+import { BankService } from 'src/bank/bank.service';
+import { TransactionService } from 'src/transaction/transaction.service';
+import { TransactionBodyDto } from './dto/inbound-transaction.dto';
+import { EncryptedResponseDto, ResponsePayloadDto } from './dto/response.dto';
+import { RsaService } from './rsa.service';
+import { PrismaService } from 'src/prisma.service';
+import { AccountInfoDto } from './dto/account-info.dto';
 
 @Injectable()
 export class PartnerService {
   constructor(
-    private readonly prisma: PrismaService,
     private readonly transactionService: TransactionService,
     private readonly bankService: BankService,
     private readonly rsaService: RsaService,
     private readonly accountService: AccountsService,
+    private readonly prismaService: PrismaService,
   ) {}
 
-  async getAccountInfo(
-    accountNumber: string,
-  ) {
-    return await this.accountService.findOnebyAccountNumber(accountNumber);
+  async getAccountInfo(getAccountInfoDto: AccountInfoDto) {
+    const account = await this.prismaService.account.findUnique({
+      where: {
+        account_number: getAccountInfoDto.payload.accountNumber,
+      },
+      select: {
+        account_id: true,
+        account_number: true,
+        account_balance: true,
+        customer: {
+          select: {
+            full_name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    if (!account) {
+      throw new BadRequestException('Account not found');
+    }
+
+    const responsePayload = {
+      statusCode: 200,
+      message: 'Account information retrieved successfully',
+      data: account,
+    };
+
+    const { responseIntegrity, encryptedResponse } = this.createResponseData(
+      responsePayload,
+      getAccountInfoDto.header.hashMethod,
+      getAccountInfoDto.payload.fromBankCode,
+    );
+
+    const response: EncryptedResponseDto = {
+      encryptedPayload: encryptedResponse,
+      integrity: responseIntegrity,
+    };
+
+    return response;
   }
 
-  // async makeTransaction(fromBankCode: string, body: CreateTransactionDto) {
-  //   const fromBank = await this.bankService.getBankByName(fromBankCode);
-  //   if (!fromBank) throw new BadRequestException('From bank not found.');
-  //   body.from_bank_id = fromBank.bank_id;
-
-  //   const payload = {
-  //     status: 'success',
-  //     message: 'Transaction successful',
-  //     timestamp: Date.now(),
-  //   };
-
-  //   const header = {
-  //     hashMethod: 'sha256',
-  //   };
-
-  //   const dataToHash = JSON.stringify({ header, payload });
-  //   const integrity = this.rsaService.hashData(dataToHash, header.hashMethod);
-  //   const signature = this.rsaService.createSignature(
-  //     dataToHash,
-  //     header.hashMethod,
-  //   );
-  //   const encryptedData = this.rsaService.encrypt(dataToHash, fromBankCode);
-
-  //   body.response_signature = signature;
-
-  //   await this.transactionService.create(body);
-
-  //   return {
-  //     data: encryptedData,
-  //     integrity,
-  //     signature,
-  //   };
-  // }
-
-  async makeTransaction({
-    header,
-    encryptedPayload,
-    integrity,
-    signature,
-  }: {
-    header: {
-      hashMethod: string;
-      timestamp: string;
-    }
-    encryptedPayload: string;
-    integrity: string;
-    signature: string;
-  }) {
+  async makeTransaction(
+    makeTransactionDto: TransactionBodyDto,
+  ): Promise<EncryptedResponseDto> {
     const bankId = process.env.BANK_ID;
-    const payload = JSON.parse(this.rsaService.decrypt(encryptedPayload));
+    const payload = makeTransactionDto.payload;
+    const header = makeTransactionDto.header;
+    const signature = makeTransactionDto.signature;
 
     const {
       fromBankCode,
@@ -83,30 +78,21 @@ export class PartnerService {
       message,
       feePayer,
       feeAmount,
-      timestamp,
     } = payload;
     const fromBank = await this.bankService.getBankByName(fromBankCode);
     if (!fromBank) throw new BadRequestException('From bank not found.');
 
-    const responsePayload = {
-      statuscode: 200,
+    const responsePayload: ResponsePayloadDto = {
+      statusCode: 200,
       message: 'Transaction successful',
-      timestamp: Date.now(),
     };
 
-    const responseData = JSON.stringify(responsePayload);
-    const responseIntegrity = this.rsaService.hashData(
-      responseData,
-      header.hashMethod,
-    );
-    const responseSignature = this.rsaService.createSignature(
-      responseData,
-      header.hashMethod,
-    );
-    const encryptedResponse = this.rsaService.encrypt(
-      responseData,
-      fromBankCode,
-    );
+    const { responseIntegrity, responseSignature, encryptedResponse } =
+      this.createResponseData(
+        responsePayload,
+        header.hashMethod,
+        fromBank.bank_name ?? '',
+      );
 
     const createBankDto = {
       from_bank_id: fromBank.bank_id,
@@ -120,14 +106,38 @@ export class PartnerService {
       fee_amount: feeAmount,
       request_signature: signature,
       response_signature: responseSignature,
-    }
+    };
 
     await this.transactionService.handleInboundTransaction(createBankDto);
 
-    return {
-      data: encryptedResponse,
+    const response: EncryptedResponseDto = {
+      encryptedPayload: encryptedResponse,
       integrity: responseIntegrity,
       signature: responseSignature,
     };
+
+    return response;
+  }
+
+  private createResponseData(
+    responsePayload: any,
+    hashMethod: string,
+    fromBankCode: string,
+  ) {
+    const responseData = JSON.stringify(responsePayload);
+    const responseIntegrity = this.rsaService.hashData(
+      responseData,
+      hashMethod,
+    );
+    const responseSignature = this.rsaService.createSignature(
+      responseData,
+      hashMethod,
+    );
+    const encryptedResponse = this.rsaService.encrypt(
+      responseData,
+      fromBankCode,
+    );
+
+    return { responseIntegrity, responseSignature, encryptedResponse };
   }
 }

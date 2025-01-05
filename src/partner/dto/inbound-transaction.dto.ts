@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsNumber } from 'class-validator';
 import { HeaderDto } from './request.dto';
 
-class TransactionPayloadDto {
+export class TransactionPayloadDto {
   @ApiProperty({ description: 'Bank code (assumed to be the bank name in the database)' })
   @IsString()
   @IsNotEmpty()
@@ -39,7 +39,7 @@ class TransactionPayloadDto {
   feeAmount: number;
 }
 
-export class MakeTransactionBody {
+export class TransactionBodyDto {
   @ApiProperty({ description: 'Header object containing hash method and timestamp' })
   @IsNotEmpty()
   header: HeaderDto;

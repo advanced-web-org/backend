@@ -2,21 +2,16 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty } from 'class-validator';
 import { HeaderDto } from './request.dto';
 
-class AccountInfoPayloadDto {
+export class AccountInfoPayloadDto {
   @ApiProperty({ description: 'Bank code' })
   @IsString()
   @IsNotEmpty()
-  bankCode: string;
+  fromBankCode: string;
 
   @ApiProperty({ description: 'Account number' })
   @IsString()
   @IsNotEmpty()
   accountNumber: string;
-
-  @ApiProperty({ description: 'Hash value' })
-  @IsString()
-  @IsNotEmpty()
-  hash: string;
 }
 
 export class AccountInfoDto {
@@ -32,8 +27,8 @@ export class AccountInfoDto {
   @IsNotEmpty()
   payload: AccountInfoPayloadDto;
 
-  @ApiProperty({ description: 'Signature of the request' })
+  @ApiProperty({ description: 'Integrity of the request' })
   @IsString()
   @IsNotEmpty()
-  signature: string;
+  integrity: string;
 }

@@ -78,7 +78,7 @@ export class RsaGuard implements CanActivate {
     const payloadInstance = plainToInstance(dto, decryptedPayload);
     const errors = await validate(payloadInstance);
     if (errors.length > 0) {
-      throw new BadRequestException('Decrypted payload validation failed.');
+      throw new BadRequestException('Decrypted payload validation failed. Invalid payload structure.');
     }
 
     // Attach the validated and decrypted payload to the request object

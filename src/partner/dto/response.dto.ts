@@ -27,4 +27,7 @@ export class ResponsePayloadDto {
   @IsString()
   @IsNotEmpty()
   message: string;
+
+  @ApiProperty({ description: 'Response data' })
+  data?: any;
 }

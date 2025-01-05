@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
+import { TransactionBodyDto } from './dto/inbound-transaction.dto';
 
 export enum EncryptMethod {
   rsa = 'rsa',
@@ -29,12 +30,12 @@ export class RsaService {
       this.publicKeys = {
         'Bank A': {
           [EncryptMethod.rsa]: fs.readFileSync('rsa-keys/public.pem', 'utf-8'),
-          [EncryptMethod.pgp]: fs.readFileSync('pgp-keys/public.asc', 'utf-8')
+          [EncryptMethod.pgp]: fs.readFileSync('pgp-keys/public.asc', 'utf-8'),
         },
         'Bank B': {
           [EncryptMethod.rsa]: fs.readFileSync('rsa-keys/public1.pem', 'utf-8'),
-          [EncryptMethod.pgp]: fs.readFileSync('pgp-keys/public1.asc', 'utf-8')
-        }
+          [EncryptMethod.pgp]: fs.readFileSync('pgp-keys/public1.asc', 'utf-8'),
+        },
       };
     } catch (error) {
       throw new InternalServerErrorException(
@@ -282,7 +283,7 @@ async function runTests() {
   const rsaService = new RsaService();
 
   // Mock transaction data
-  const transaction: MakeTransactionBody = {
+  const transaction: TransactionBodyDto = {
     header: {
       hashMethod: 'sha256',
       timestamp: new Date().toISOString(),
@@ -350,13 +351,13 @@ async function runTests() {
   console.log('Timestamp Freshness:', isFresh);
 }
 
-async function generateSampleRequestFromOpponent() {
+async function generateSampleTransactionReq() {
   const rsaService = new RsaService();
 
   // Mock opponent request data
   const opponentRequestData = {
     fromBankCode: 'Bank B',
-    fromBankAccountNumber: '123456789',
+    fromAccountNumber: '123456789',
     toBankAccountNumber: 'A12345',
     amount: 5000,
     message: 'Payment for invoice #12345',
@@ -373,13 +374,32 @@ async function generateSampleRequestFromOpponent() {
   );
 }
 
+async function generateSampleGetInfoReq() {
+  const rsaService = new RsaService();
+
+  // Mock opponent request data
+  const opponentRequestData = {
+    fromBankCode: 'Bank B',
+    accountNumber: 'A12345',
+  };
+
+  const sampleRequestFromOpponent =
+    rsaService.generateSampleRequestFromOpponent(opponentRequestData);
+
+  console.log(
+    'Sample Request from Opponent:',
+    JSON.stringify(sampleRequestFromOpponent, null, 2),
+  );
+}
+
 async function verifyResponse() {
   const response = {
-    data: 'eiZBQzRyClJLurHhyAEH8K9I7ZGOYfe9onzpgs+9cUbRtJ6IvmnlcyeuMBdV7/+ivm6P8MPbZjv11Pf64KQrKflRuJYfh61z1xboLLMJKbc58/SHFYEUYIk+rHH1SxxOldjPcIlSBNB6VwH3sqRcydZ/YcCu1mzSoHN0NItutBWCk1UJh+UO1UUNMOkt1UT9WUFYfk1x1qz0HACDezoWKmGBI1z/sdLo6mY8cd3Dc3urhAv0dhy1ux83GOr497dc9fnyIWGogXXMCd+fbF+VB/asF7qhs86Df81KepibsymfaxryheS1TK75PS1ewk4Vi1D4U7AcnwRZ71H9NkngNkp/e+0cnSlBr0ggUaogP8D06cvpvXWHRQIsxtGH01DHph8CriYSru5YoJaehRD8UTUzh1GLSxCM/4oA/5/CbbzEAnXRIO3yqniSdMyUb7tJnaSbuWLUPeIv6yRnQ0hHQxKsFK0jRqKPfb4X8q1t3zixDT/1ux87UpfzMQZ9y82JFyWNJSiz3RYOIyu+Lk85/CbeWipDkAgx49WFEdWqAzhKwkjkfsrTphNcWfQL3VnNUCvBPY2mcHYSQE9UGbcipVlUA0UHHz7VcRPre2OTqjsuzoeB1AKUXhCnNdMT4c9BQ8EvSb7GScq4jKi8daKuUlVLsaoS6E2aluJ1Kn7HdDw=',
+    data:
+      'EIApwOSJwWRN3vqiacjL4G5HnfG75c0qRaLLJ3U9F4WKCgMmiVDT7i9pNMhCLtVt0x7M/rg9JrY+9HP/renS6bEDYV+m2IMRrwCvHG49HLcm/dwuEnOlxQvpaO6vg8Bf3MumyxDWYRJehDJMubgzcyK1haQz4/oDq1lqF0R84KJf3jue50652TBMbqTQxjO9l/fM5ap4kVS11ALfA5SpBSI53D12I/mX4DnR4ThPAZjRnWn14Rz+Kl05zKmVeAz534sM4/dx5We7QTmvSQkqqG+MR3sQOPLhLxkLrov70TX5YG7LyzsmNpyfiBRazJCxCTzYiFzgVVMIManocj41b1ZCfQcvWMQxpQptCvRNnYyP1b/P+mWSoUBHWBuaszqUetkhgHmmSCiwwGyxx9b+y8zJzqNHhYPF0EdQ6SCoPnCGuo3ykHKlEVC4KwRG3nti6jV4E0AeBXwzM+clF58xfHOF3b6IOpxxnUJCw9AuDAxSFB80yIwsURv2I0L6l3mMfMggEBOXFLqgxP3YxebQIFoxqgWmKzup300ICPuR+sOOd/i0pFIc0DQPMWvQoZR7g0xPRjdrGT9IazM8J5Q9DyKnmjN7ekbmlfivSqqbV05zjyPfqvm/Pshp4hwswBxahnFR3xfT5ZpfdJEe2m3R903hUh4HxLysc5tLeESm3UE=',
     integrity:
-      '01f00173a010f6f791c575730198e6dae3714365cf86453a5b22d673b7059f19',
+      'b149a7b2ee354565845235af80cdea6e72c3bb1b501345e4289bc4d5d089c144',
     signature:
-      '06416e551ebd91d52d146e6aff44a7024daf7aa9e6446d5158bc6de5d2b5934ceb88005dc8fe2c831e8d7ad282071e553515e3edb7475f89ad4c3f1d93853cf299050ea9d26c2b7ba733a1a8762555da3d5474019636152c646a72f18ec24870a2e265269a3069f25c3478d9951fcf17267555eaee8b9f0bf2df59a964f5856cd7d2e68444a4e2069450312b8ead5be5066e7f5527451a75c03b2cd64ad1dd0dfdca0907462b1c7785da38903315a5c72dc044c3ae6c4abbebd4e0b6aba656a07d7a3d0f4d02e22b64041a7edfef936b43cabc872fb776e3714c073e62acd04139e1360224f63ad88792717b5d1bdad4a734b058455043774e549fca3eac7526c4b74d89eba4672e7ce77ed105507e04ed6ce173d57d32c1246af36918b89127d781f9d3d206961b731c1331fd6a5bf5ca36cf3b80f27f7fe145dd55ac44a0d3e9c13acd3f578bc5fdc0725c303443d3c18b134d611bcda3b80a934f26bd4dfbf6960174195fc4b6ec82bab7faa4be3084ed9098d46c30a30f02e4aa2814803636b69857495278dd0bc829aa4263e248fc8a35a3370a6762a0b832d986f9fe3d27399a1c065a1fce3c3443865b6980982129a110d2a943dcd984b5e580802be4944fa2ac6680189d417197495ca29b1b26ab9a98fd9c7f684ee7f0db3a130228e673da8b79c785980d23d61448a153dfed12b2e52d133bdadd8a49d882a5ec5b',
+      '5011b4a95aa613dcaf5554b9f52431992605333531939a3ddd2beb7da86655f66180dde328195adf9800ba171b71eaff14fe15582ed24cfbf5bebd53eb301ff5294bb86b73b33c987295fdbca3a76c6c3dfd59e05974f7d0ced647a2119aee521fec789d6a4f484d1331651f78a6009addcf96281673378900b916b423ee3e1e0f7e7a77b71e98743425a037829c7bf418b4ae19a9a640c78fe55bc383fbb64aae87c50005cac25d83736fd06d5d46a5a2094e10dde04579c5e74335342f96cc10f379b00db0f0fe30f4f5d9e50b7b20a454c77be98d0bb720adb4e2c873377b15514f958bee4a7d56dac35e0385052d562f40809c12cbd8792534252b5aa80fca53c54afb572cd8f869e283c32ed3da71181b03c49bd5034b5f1dad3146fc2e9baae59abe4e79f0498176e0b3fa85cbc97c5e5227ea83d02548409049377308504aae01541a7e965948b56f096c3d1f7f2548045cf1c83511482c0e562d0f93f26dc3192e48aa753fd36d35c491bac508325365f661a0c45186f23429186b51bd97946d159513ab2fd095ed8e02f5259d77e2306d6ff9b6d8e0fb3832fcea9eaa00e777618557f0315fdf7b87403f4ec187510131d2d5911a89e9911e00414cae76ae43297e502549c8f875f4500ddc06d8ec1a3dea1b0a17c235eba2385d83affdae9e314f5db948fb33a5c31b488cd59dba7d23e76ce2135313fd7cdde721',
   };
 
   const rsaService = new RsaService();
@@ -411,13 +431,8 @@ async function verifyResponse() {
   // Parse decrypted data
   const parsedData = JSON.parse(decryptedData);
   console.log('Parsed Data:', parsedData);
-
-  // Verify timestamp
-  const isFresh = rsaService.isRequestFresh(
-    new Date(parsedData.timestamp).getTime(),
-  );
-  console.log('Timestamp Freshness:', isFresh);
 }
 
-// verifyResponse();
-// generateSampleRequestFromOpponent();
+verifyResponse();
+// generateSampleTransactionReq();
+// generateSampleGetInfoReq();
