@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
-import { MakeTransactionBody } from './partner.controller';
 
 export enum EncryptMethod {
   rsa = 'rsa',

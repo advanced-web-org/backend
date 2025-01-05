@@ -1,6 +1,7 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { RsaGuard } from 'src/auth/guards/rsa.guard';
 import { PartnerService } from './partner.service';
+import { AccountInfoDto } from './dto/account-info.dto';
 
 @Controller('partner')
 @UseGuards(RsaGuard)
@@ -10,7 +11,7 @@ export class PartnerController {
   ) { }
   
   @Post('get-account-info')
-  async getAccountInfo(@Body() body: GetAccountInfoBody) {
+  async getAccountInfo(@Body() body: AccountInfoDto) {
     return await this.partnerService.getAccountInfo(body.payload.accountNumber);
   }
 
@@ -31,32 +32,4 @@ export class PartnerController {
       signature: body.signature,
     })
   }
-}
-
-export interface GetAccountInfoBody {
-  payload: {
-    bankId: string;
-    accountNumber: string;
-    hash: string;
-  };
-  signature: string;
-}
-
-
-export interface MakeTransactionBody {
-  header: {
-    hashMethod: string;
-    timestamp: string;
-  },
-  payload: {
-    fromBankCode: string; // assume that the bank code is bank name in database
-    fromAccountNumber: string;
-    toBankAccountNumber: string;
-    amount: number;
-    message: string;
-    feePayer: string; // sender | receiver
-    feeAmount: number;
-  };
-  integrity: string; // hash of the payload: sha256(payload + header + secret key)
-  signature?: string; // encrypted hash of the integrity: rsa/pgp(integrity, private key)
 }
