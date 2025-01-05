@@ -40,9 +40,7 @@ export class InternalTransactionDto {
   e_signal?: string;
 }
 
-export class ExternalTransactionDto {
-
-}
+export class ExternalTransactionDto {}
 
 export class CreateTransactionDto {
   type: 'internal' | 'external';

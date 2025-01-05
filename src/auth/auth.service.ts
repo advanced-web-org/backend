@@ -45,6 +45,11 @@ export class AuthService {
       throw new BadRequestException('Phone number already registered');
     }
 
+    // Set default password if not provided
+    if (!payload.password) {
+      payload.password = '123456';
+    }
+
     const hashedPassword = await this.hashPassword(password);
 
     const customer = await this.customersService.createCustomer({
@@ -64,7 +69,6 @@ export class AuthService {
     do {
       account_number = (Math.floor(Math.random() * 90000) + 10000).toString();
     } while (await this.accountsService.findOnebyAccountNumber(account_number));
-
 
     // Create an account for the customer
     const account = await this.accountsService.create({
