@@ -7,13 +7,11 @@ import { PartnerService } from './partner.service';
 export class PartnerController {
   constructor(
     private readonly partnerService: PartnerService,
-    // private readonly accountService: AccountService
   ) { }
   
   @Post('get-account-info')
   async getAccountInfo(@Body() body: GetAccountInfoBody) {
-
-    // return await this.partnerService.getAccountInfo(bankId, accountNumber, hash, signature);
+    return await this.partnerService.getAccountInfo(body.payload.accountNumber);
   }
 
   @Post('transaction')

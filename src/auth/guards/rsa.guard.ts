@@ -2,15 +2,12 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  forwardRef,
+  Inject,
   Injectable,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { RsaService } from 'src/partner/rsa.service';
-
-export enum EncryptMethod {
-  rsa = 'rsa',
-  pgp = 'pgp',
-}
+import { EncryptMethod, RsaService } from 'src/partner/rsa.service';
 
 @Injectable()
 export class RsaGuard implements CanActivate {

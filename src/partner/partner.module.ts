@@ -24,6 +24,7 @@ import { RsaService } from './rsa.service';
     OtpService,
     AppMailerService,
     CustomersService,
+    AccountsService
   ],
 })
 export class PartnerModule {}

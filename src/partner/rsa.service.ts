@@ -6,8 +6,11 @@ import {
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 import { MakeTransactionBody } from './partner.controller';
-import { EncryptMethod } from 'src/auth/guards/rsa.guard';
 
+export enum EncryptMethod {
+  rsa = 'rsa',
+  pgp = 'pgp',
+}
 @Injectable()
 export class RsaService {
   private privateKey: string;

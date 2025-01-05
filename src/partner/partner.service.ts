@@ -1,11 +1,12 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Prisma, trans_type } from '@prisma/client';
+import { Account, Prisma, trans_type } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { hashData } from './pgp.utils';
 import { TransactionService } from 'src/transaction/transaction.service';
 import { CreateTransactionDto } from 'src/transaction/dto/create-transaction.dto';
 import { BankService } from 'src/bank/bank.service';
 import { RsaService } from './rsa.service';
+import { AccountsService } from 'src/accounts/accounts.service';
 
 @Injectable()
 export class PartnerService {
@@ -14,23 +15,13 @@ export class PartnerService {
     private readonly transactionService: TransactionService,
     private readonly bankService: BankService,
     private readonly rsaService: RsaService,
+    private readonly accountService: AccountsService,
   ) {}
 
   async getAccountInfo(
-    bankId: number,
     accountNumber: string,
-    hash: string,
-    signature: string,
   ) {
-    const bank = await this.prisma.bank.findUnique({
-      where: { bank_id: bankId },
-    });
-    if (!bank || !bank.public_key)
-      throw new BadRequestException('Bank not registered.');
-
-    const dataToHash = `${bankId}-${accountNumber}`;
-    const expectedHash = hashData(dataToHash, bank.public_key);
-    if (expectedHash !== hash) throw new BadRequestException('Hash mismatch.');
+    return await this.accountService.findOnebyAccountNumber(accountNumber);
   }
 
   // async makeTransaction(fromBankCode: string, body: CreateTransactionDto) {
