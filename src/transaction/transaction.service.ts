@@ -1,5 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { CreateTransactionDto, ExternalTransactionDto, InternalTransactionDto } from './dto/create-transaction.dto';
+import {
+  CreateTransactionDto,
+  ExternalTransactionDto,
+  InternalTransactionDto,
+} from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { PrismaService } from 'src/prisma.service';
 import { Prisma, trans_type, Transaction } from '@prisma/client';
@@ -36,7 +40,7 @@ export class TransactionService {
         throw new Error('Account not found');
       }
 
-      // Update the balance
+      // Update the balance of the recipient
       const toAccountData = await toAccount;
 
       await this.prisma.account.update({
@@ -54,9 +58,7 @@ export class TransactionService {
       return await this.prisma.transaction.create({
         data: {
           ...payload,
-          transaction_amount: new Prisma.Decimal(
-            payload.transaction_amount,
-          ),
+          transaction_amount: new Prisma.Decimal(payload.transaction_amount),
           fee_amount: new Prisma.Decimal(payload.fee_amount),
         },
       });
@@ -83,52 +85,74 @@ export class TransactionService {
     if (
       fromAccountData?.account_balance &&
       fromAccountData.account_balance.toNumber() <
-      payload.transaction_amount +
-      payload.fee_amount
+        payload.transaction_amount + payload.fee_amount
     ) {
       throw new BadRequestException('Insufficient balance');
     }
 
     // Update the balance
-    await this.prisma.account.update({
-      where: {
-        account_number: payload.from_account_number,
-      },
-      data: {
-        account_balance: new Prisma.Decimal(
-          (fromAccountData?.account_balance?.toNumber() ?? 0) -
-          payload.transaction_amount -
-          payload.fee_amount,
-        ),
-      },
-    });
+    if (payload.fee_payer === 'from') {
+      await this.prisma.account.update({
+        where: {
+          account_number: payload.from_account_number,
+        },
+        data: {
+          account_balance: new Prisma.Decimal(
+            (fromAccountData?.account_balance?.toNumber() ?? 0) -
+              payload.transaction_amount -
+              payload.fee_amount,
+          ),
+        },
+      });
 
-    await this.prisma.account.update({
-      where: {
-        account_number: payload.to_account_number,
-      },
-      data: {
-        account_balance: new Prisma.Decimal(
-          (toAccountData?.account_balance?.toNumber() ?? 0) +
-          payload.transaction_amount,
-        ),
-      },
-    })
+      await this.prisma.account.update({
+        where: {
+          account_number: payload.to_account_number,
+        },
+        data: {
+          account_balance: new Prisma.Decimal(
+            (toAccountData?.account_balance?.toNumber() ?? 0) +
+              payload.transaction_amount,
+          ),
+        },
+      });
+    } else {
+      await this.prisma.account.update({
+        where: {
+          account_number: payload.from_account_number,
+        },
+        data: {
+          account_balance: new Prisma.Decimal(
+            (fromAccountData?.account_balance?.toNumber() ?? 0) -
+              payload.transaction_amount,
+          ),
+        },
+      });
+
+      await this.prisma.account.update({
+        where: {
+          account_number: payload.to_account_number,
+        },
+        data: {
+          account_balance: new Prisma.Decimal(
+            (toAccountData?.account_balance?.toNumber() ?? 0) +
+              payload.transaction_amount -
+              payload.fee_amount,
+          ),
+        },
+      });
+    }
 
     return await this.prisma.transaction.create({
       data: {
         ...payload,
-        transaction_amount: new Prisma.Decimal(
-          payload.transaction_amount,
-        ),
+        transaction_amount: new Prisma.Decimal(payload.transaction_amount),
         fee_amount: new Prisma.Decimal(payload.fee_amount),
       },
     });
   }
 
-  async createExternalTransaction(
-    payload: ExternalTransactionDto,
-  ) {
+  async createExternalTransaction(payload: ExternalTransactionDto) {
     return `This action adds a new transaction for external`;
   }
 
@@ -273,23 +297,25 @@ export class TransactionService {
         include: {
           from_bank: true,
           to_bank: true,
-        }
+        },
       });
 
-      const groupedBalances = transactions.reduce<{ [key: string]: { amount: number, bankName: string } }>(
-        (acc, transaction) => {
-          const key = [transaction.from_bank_id, transaction.to_bank_id]
-            .sort()
-            .join('-');
-          if (!acc[key]) {
-            acc[key] = { amount: 0, bankName: '' };
-          }
-          acc[key].amount += Number(transaction.transaction_amount);
-          acc[key].bankName = transaction.from_bank_id === bankId ? transaction.to_bank?.bank_name || '' : transaction.from_bank?.bank_name || '';
-          return acc;
-        },
-        {},
-      );
+      const groupedBalances = transactions.reduce<{
+        [key: string]: { amount: number; bankName: string };
+      }>((acc, transaction) => {
+        const key = [transaction.from_bank_id, transaction.to_bank_id]
+          .sort()
+          .join('-');
+        if (!acc[key]) {
+          acc[key] = { amount: 0, bankName: '' };
+        }
+        acc[key].amount += Number(transaction.transaction_amount);
+        acc[key].bankName =
+          transaction.from_bank_id === bankId
+            ? transaction.to_bank?.bank_name || ''
+            : transaction.from_bank?.bank_name || '';
+        return acc;
+      }, {});
 
       return Object.keys(groupedBalances).map((key) => {
         const [fromBankId, toBankId] = key.split('-').map(Number);
@@ -354,16 +380,16 @@ export class TransactionService {
     await this.mailerService.sendOtpEmail(user.email, otp);
 
     return {
-      otpToken: await this.otpService.getOtpToken({otp, expiresAt}, userId),
-      message: `OTP sent to your email ${user.email}`
-    }
+      otpToken: await this.otpService.getOtpToken({ otp, expiresAt }, userId),
+      message: `OTP sent to your email ${user.email}`,
+    };
   }
 
   async verifyOtpForTransaction(
     userId: number,
     otp: string,
     otpToken: string,
-    payload: CreateTransactionDto
+    payload: CreateTransactionDto,
   ) {
     const user = await this.customerService.getCustomerById(userId);
     if (!user) {
@@ -372,8 +398,12 @@ export class TransactionService {
 
     // await this.otpService.verifyOtpToken(otp, otpToken, userId);
 
-    return payload.type === 'internal' ? 
-      await this.createInternalTransaction(payload.data as InternalTransactionDto) :
-      await this.createExternalTransaction(payload.data as ExternalTransactionDto);
+    return payload.type === 'internal'
+      ? await this.createInternalTransaction(
+          payload.data as InternalTransactionDto,
+        )
+      : await this.createExternalTransaction(
+          payload.data as ExternalTransactionDto,
+        );
   }
 }

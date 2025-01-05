@@ -1,3 +1,4 @@
+import { AccountsService } from 'src/accounts/accounts.service';
 import {
   BadRequestException,
   Injectable,
@@ -26,6 +27,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly otpService: OtpService,
     private readonly mailerService: AppMailerService,
+    private readonly accountsService: AccountsService,
   ) {}
 
   async hashPassword(password: string): Promise<string> {
@@ -56,12 +58,29 @@ export class AuthService {
       throw new BadRequestException('Failed to register customer');
     }
 
+    // Create an account for that customer
+    // Generate a unique account number
+    let account_number = null;
+    do {
+      account_number = (Math.floor(Math.random() * 90000) + 10000).toString();
+    } while (await this.accountsService.findOnebyAccountNumber(account_number));
+
+
+    // Create an account for the customer
+    const account = await this.accountsService.create({
+      account_number,
+      customer_id: customer.customer_id,
+      account_balance: 0,
+    });
+
     return {
       message: 'Customer registered successfully',
       data: {
         phone: customer.phone,
         fullName: customer.full_name,
         email: customer.email,
+        account_number: account.account_number,
+        account_balance: account.account_balance,
       },
     };
   }
@@ -134,8 +153,8 @@ export class AuthService {
 
       user = {
         id: res.staff_id.toString(),
-        username: res.username? res.username : '',
-        fullName: res.full_name? res.full_name : '',
+        username: res.username ? res.username : '',
+        fullName: res.full_name ? res.full_name : '',
         role: res.role == 'admin' ? Role.ADMIN : Role.EMPLOYEE,
       };
     } else {
@@ -198,8 +217,8 @@ export class AuthService {
       userRefreshToken = res.refresh_token ?? '';
       user = {
         id: res.staff_id.toString(),
-        username: res.username? res.username : '',
-        fullName: res.full_name? res.full_name : '',
+        username: res.username ? res.username : '',
+        fullName: res.full_name ? res.full_name : '',
         role: res.role == 'admin' ? Role.ADMIN : Role.EMPLOYEE,
       };
     } else {
@@ -324,22 +343,29 @@ export class AuthService {
   }
 
   async requestOtpForPasswordReset(username: string) {
-    const user = await this.customersService.getCustomerByPhone(username)
+    const user = await this.customersService.getCustomerByPhone(username);
 
     if (!user) {
       throw new BadRequestException('Username not found');
-    };
+    }
 
     const { otp, expiresAt }: OtpData = await this.otpService.getOtpData();
     await this.mailerService.sendOtpEmail(user.email, otp);
 
     return {
-      otpToken: await this.otpService.getOtpToken({otp, expiresAt}, user.customer_id),
-      message: `OTP sent to your email ${user.email}`
-    }
+      otpToken: await this.otpService.getOtpToken(
+        { otp, expiresAt },
+        user.customer_id,
+      ),
+      message: `OTP sent to your email ${user.email}`,
+    };
   }
 
-  async verifyOtpForPasswordReset(username: string, otp: string, otpToken: string) {
+  async verifyOtpForPasswordReset(
+    username: string,
+    otp: string,
+    otpToken: string,
+  ) {
     const user = await this.customersService.getCustomerByPhone(username);
 
     if (!user) {
@@ -350,8 +376,8 @@ export class AuthService {
 
     return {
       status: 'success',
-      message: 'OTP verified successfully'
-    }
+      message: 'OTP verified successfully',
+    };
   }
 
   async resetPassword(username: string, newPassword: string) {
@@ -359,13 +385,15 @@ export class AuthService {
     if (!user) {
       throw new BadRequestException('Username not found');
     }
-    
+
     const hashedPassword = await this.hashPassword(newPassword);
-    await this.customersService.updateCustomer(username, { password: hashedPassword });
+    await this.customersService.updateCustomer(username, {
+      password: hashedPassword,
+    });
 
     return {
       status: 'success',
-      message: 'Password reset successfully'
-    }
+      message: 'Password reset successfully',
+    };
   }
 }

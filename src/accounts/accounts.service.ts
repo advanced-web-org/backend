@@ -8,7 +8,9 @@ export class AccountsService {
   constructor(private readonly prismaService: PrismaService) {}
 
   create(createAccountDto: CreateAccountDto) {
-    return 'This action adds a new account';
+    return this.prismaService.account.create({
+      data: createAccountDto,
+    });
   }
 
   findAll() {

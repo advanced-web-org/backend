@@ -35,6 +35,10 @@ export class AccountsController {
     return this.accountsService.findOne(+id);
   }
 
+  findOnebyAccountNumber(accountNumber: string) {
+    return this.accountsService.findOnebyAccountNumber(accountNumber);
+  }
+
   @ApiOperation({ summary: 'Update an account by ID' })
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateAccountDto: UpdateAccountDto) {
