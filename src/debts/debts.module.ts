@@ -6,11 +6,11 @@ import DebtsValidator from './validator/debts.validator';
 import { OtpModule } from 'src/otp/otp.module';
 import { AppMailerModule } from 'src/mailer/mailer.module';
 import { NotificationModule } from 'src/notification/notification.module';
-import { Kafka } from 'kafkajs';
 import { KafkaModule } from 'src/kafka/kafka.module';
+import { TransactionModule } from 'src/transaction/transaction.module';
 
 @Module({
-  imports: [OtpModule, AppMailerModule, NotificationModule, KafkaModule],
+  imports: [OtpModule, AppMailerModule, NotificationModule, KafkaModule, TransactionModule],
   controllers: [DebtsController],
   providers: [DebtsService, PrismaService, DebtsValidator],
 })

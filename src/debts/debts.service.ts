@@ -7,8 +7,9 @@ import { assert } from 'console';
 import { KafkaService } from 'src/kafka/kafka.service';
 import { DebtNotification } from 'src/notification/types/debt-notification.type';
 import { OtpData } from 'src/otp/types/otp-data.type';
-import { Debt, debt_status } from '@prisma/client';
+import { Debt, debt_status, trans_type } from '@prisma/client';
 import { numberToCurrency } from './utils/currency.utils';
+import { TransactionService } from 'src/transaction/transaction.service';
 
 export enum DebtAction {
   PAID = 'PAID',
@@ -30,7 +31,8 @@ export class DebtsService {
     private readonly prisma: PrismaService,
     private readonly otpService: OtpService,
     private readonly mailer: AppMailerService,
-    private readonly kafkaService: KafkaService
+    private readonly kafkaService: KafkaService,
+    private readonly transactionService: TransactionService,
   ) { }
 
   async createDebt(createDebtDto: CreateDebtDto) {
@@ -146,6 +148,46 @@ export class DebtsService {
     console.log('verifying', otp, otpToken, userId);
 
     await this.otpService.verifyOtpToken(otp, otpToken, userId);
+
+    // make a transaction using the transaction service
+    const currentDebt = await this.prisma.debt.findUnique({
+      where: { debt_id: debtId }
+    });
+    if (!currentDebt) {
+      throw new BadRequestException('Debt not found');
+    }
+
+    const creditorAccount = await this.prisma.account.findFirst({
+      where: { customer_id: currentDebt.creditor_id }
+    });
+    if (!creditorAccount) {
+      throw new BadRequestException('Creditor account not found');
+    }
+    const debtorAccount = await this.prisma.account.findFirst({
+      where: { customer_id: currentDebt.debtor_id }
+    });
+    if (!debtorAccount) {
+      throw new BadRequestException('Debtor account not found');
+    }
+
+    const transaction = await this.transactionService.createInternalTransaction({
+      from_bank_id: 1,
+      from_account_number: debtorAccount.account_number,
+      to_bank_id: 1,
+      to_account_number: creditorAccount.account_number,
+      transaction_type: trans_type.transaction,
+      transaction_amount: Number(currentDebt.debt_amount),
+      transaction_message: 'Debt payment',
+      fee_payer: 'from',
+      fee_amount: 0,
+    });
+
+    await this.prisma.debtPayment.create({
+      data: {
+        debt_id: debtId,
+        transaction_id: transaction.transaction_id,
+      },
+    });
 
     const debt = await this.prisma.debt.update({
       where: { debt_id: debtId },
