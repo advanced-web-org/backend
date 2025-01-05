@@ -100,6 +100,13 @@ export class DebtsService {
             full_name: true,
           },
         },
+        debtDeletion: {
+          select: {
+            deleter_id: true,
+            delete_message: true,
+            created_at: true,
+          },
+        },
       },
     });
   }
@@ -136,6 +143,7 @@ export class DebtsService {
   }
 
   async verifyOtpAndPayDebt(userId: number, debtId: number, otp: string, otpToken: string) {
+    console.log('verifying', otp, otpToken, userId);
 
     await this.otpService.verifyOtpToken(otp, otpToken, userId);
 
@@ -153,6 +161,7 @@ export class DebtsService {
     const message = `${debt.debtor.full_name} just paid a debt of ${numberToCurrency(Number(debt.debt_amount))}.`;
     const created_at = new Date().toISOString();
     // Publish Kafka message to notify the creditor
+    console.log('publishing kafka message for debt paid');
     await this.kafkaService.produce<DebtKafkaMessage>('debt-notifications', {
       userIdToSend: debt.creditor_id,
       message: message,
@@ -164,7 +173,7 @@ export class DebtsService {
     return { message: 'Debt paid successfully' };
   }
 
-  async deleteDebt(debtId: number, userId: number) {
+  async deleteDebt(debtId: number, delete_message: string, userId: number) {
     const debt = await this.prisma.debt.findUnique({ where: { debt_id: debtId } });
     if (!debt) {
       throw new BadRequestException('Debt not found');
@@ -186,6 +195,14 @@ export class DebtsService {
     await this.prisma.debt.update({
       where: { debt_id: debtId },
       data: { status: debt_status.deleted },
+    });
+
+    await this.prisma.debtDeletion.create({
+      data: {
+        debt_id: debtId,
+        deleter_id: userId,
+        delete_message: delete_message,
+      },
     });
 
     const userIdToSendNotification = this.isCreditor(userId, debt.creditor_id) ? debt.debtor_id : debt.creditor_id;
