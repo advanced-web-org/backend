@@ -1,20 +1,20 @@
+import { HttpService } from '@nestjs/axios';
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { Prisma, Transaction } from '@prisma/client';
+import { AccountsService } from 'src/accounts/accounts.service';
+import { BankService } from 'src/bank/bank.service';
+import { CustomersService } from 'src/customers/customers.service';
+import { AppMailerService } from 'src/mailer/mailer.service';
+import { OtpService } from 'src/otp/otp.service';
+import { OtpData } from 'src/otp/types/otp-data.type';
+import { RsaService } from 'src/partner/rsa.service';
+import { PrismaService } from 'src/prisma.service';
 import {
   CreateTransactionDto,
   ExternalTransactionDto,
   InternalTransactionDto,
 } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
-import { PrismaService } from 'src/prisma.service';
-import { Prisma, trans_type, Transaction } from '@prisma/client';
-import { AccountsService } from 'src/accounts/accounts.service';
-import { OtpService } from 'src/otp/otp.service';
-import { AppMailerService } from 'src/mailer/mailer.service';
-import { CustomersService } from 'src/customers/customers.service';
-import { OtpData } from 'src/otp/types/otp-data.type';
-import { HttpService } from '@nestjs/axios';
-import { BankService } from 'src/bank/bank.service';
-import { RsaService } from 'src/partner/rsa.service';
 
 @Injectable()
 export class TransactionService {
@@ -413,10 +413,12 @@ export class TransactionService {
         );
   }
 
-  async handleInboundTransaction(createTransactionDto: CreateTransactionDto) {
+  async handleInboundTransaction(
+    internalTransactionPayload: InternalTransactionDto,
+  ) {
     // check if the to account exists
     const toAccount = await this.accountService.findOnebyAccountNumber(
-      createTransactionDto.to_account_number,
+      internalTransactionPayload.to_account_number,
     );
 
     if (!toAccount) {
@@ -427,14 +429,14 @@ export class TransactionService {
       // Update the balance
       await transactionalPrisma.account.update({
         where: {
-          account_number: createTransactionDto.to_account_number,
+          account_number: internalTransactionPayload.to_account_number,
         },
         data: {
           account_balance: {
             increment:
-              createTransactionDto.transaction_amount -
-              (createTransactionDto.fee_payer === 'to'
-                ? createTransactionDto.fee_amount
+              internalTransactionPayload.transaction_amount -
+              (internalTransactionPayload.fee_payer === 'to'
+                ? internalTransactionPayload.fee_amount
                 : 0),
           },
         },
@@ -443,28 +445,32 @@ export class TransactionService {
       // Create the transaction
       await transactionalPrisma.transaction.create({
         data: {
-          ...createTransactionDto,
+          ...internalTransactionPayload,
           transaction_amount: new Prisma.Decimal(
-            createTransactionDto.transaction_amount,
+            internalTransactionPayload.transaction_amount,
           ),
-          fee_amount: new Prisma.Decimal(createTransactionDto.fee_amount),
+          fee_amount: new Prisma.Decimal(internalTransactionPayload.fee_amount),
         },
       });
     });
   }
 
   // Nomeo bank
-  async handleOutboundTransaction(createTransactionDto: CreateTransactionDto) {
+  async handleOutboundTransaction(
+    internalTransactionPayload: InternalTransactionDto,
+  ) {
     const bankEndpoint =
       'https://nomeobank.onrender.com/transactions/external/receive';
-    const fromBank = await this.bankService.findOne(Number(process.env.BANK_ID));
+    const fromBank = await this.bankService.findOne(
+      Number(process.env.BANK_ID),
+    );
     if (!fromBank) {
       throw new Error('Bank not found');
     }
-    const bank_code = fromBank.bank_name;
+    const bank_code = fromBank.bank_name ?? '';
 
     const toBank = await this.bankService.findOne(
-      createTransactionDto.to_bank_id,
+      internalTransactionPayload.to_bank_id,
     );
     if (!toBank) {
       throw new Error('Bank not found');
@@ -475,15 +481,19 @@ export class TransactionService {
       throw new Error('Bank code not found');
     }
 
-    const requestPayload = {
+    const requestPayload: ExternalTransactionDto = {
       bank_code,
-      sender_account_number: createTransactionDto.from_account_number,
-      recicpient_account_number: createTransactionDto.to_account_number,
-      transaction_amount: createTransactionDto.transaction_amount,
-      transaction_message: createTransactionDto.transaction_message,
+      sender_account_number:
+        internalTransactionPayload.from_account_number ?? '',
+      recicpient_account_number: internalTransactionPayload.to_account_number,
+      transaction_amount:
+        internalTransactionPayload.transaction_amount.toString(),
+      transaction_message: internalTransactionPayload.transaction_message,
       fee_payment_method:
-        createTransactionDto.fee_payer === 'from' ? 'SENDER' : 'RECIPIENT',
-      fee_amount: createTransactionDto.fee_amount,
+        internalTransactionPayload.fee_payer === 'from'
+          ? 'SENDER'
+          : 'RECIPIENT',
+      fee_amount: internalTransactionPayload.fee_amount.toString(),
     };
 
     const encryptedPayload = this.rsaService.encrypt(
@@ -536,12 +546,12 @@ export class TransactionService {
       throw new Error('Invalid response signature');
     }
 
-    createTransactionDto.request_signature = signature;
-    createTransactionDto.response_signature = responseSignature;
+    internalTransactionPayload.request_signature = signature;
+    internalTransactionPayload.response_signature = responseSignature;
 
     // check if the from account exists
     const fromAccount = await this.accountService.findOnebyAccountNumber(
-      createTransactionDto.from_account_number ?? '',
+      internalTransactionPayload.from_account_number ?? '',
     );
 
     if (!fromAccount) {
@@ -552,14 +562,14 @@ export class TransactionService {
       // Update the balance
       await transactionalPrisma.account.update({
         where: {
-          account_number: createTransactionDto.from_account_number,
+          account_number: internalTransactionPayload.from_account_number,
         },
         data: {
           account_balance: {
             decrement:
-              createTransactionDto.transaction_amount +
-              (createTransactionDto.fee_payer === 'from'
-                ? createTransactionDto.fee_amount
+              internalTransactionPayload.transaction_amount +
+              (internalTransactionPayload.fee_payer === 'from'
+                ? internalTransactionPayload.fee_amount
                 : 0),
           },
         },
@@ -568,11 +578,11 @@ export class TransactionService {
       // Create the transaction
       await transactionalPrisma.transaction.create({
         data: {
-          ...createTransactionDto,
+          ...internalTransactionPayload,
           transaction_amount: new Prisma.Decimal(
-            createTransactionDto.transaction_amount,
+            internalTransactionPayload.transaction_amount,
           ),
-          fee_amount: new Prisma.Decimal(createTransactionDto.fee_amount),
+          fee_amount: new Prisma.Decimal(internalTransactionPayload.fee_amount),
         },
       });
     });
@@ -580,15 +590,15 @@ export class TransactionService {
 }
 
 // Nomeo bank request
-export interface NomeoBankRequestPayload {
-  timestamp: string;
-  signature: string;
-  hashPayload: string;
-  payload: {
-    sender_account_number: string;
-    recicpient_account_number: string;
-    transaction_amount: string;
-    transaction_message: string;
-    fee_payment_method: string;
-  };
-}
+// export interface NomeoBankRequestPayload {
+//   timestamp: string;
+//   signature: string;
+//   hashPayload: string;
+//   payload: {
+//     sender_account_number: string;
+//     recicpient_account_number: string;
+//     transaction_amount: string;
+//     transaction_message: string;
+//     fee_payment_method: string;
+//   };
+// }

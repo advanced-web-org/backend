@@ -145,11 +145,4 @@ export class TransactionController {
       body.transaction
     );
   }
-  
-  @Post('/external/transfer')
-  async transferToExternal(@Body() createTransactionDto: CreateTransactionDto) {
-    return await this.transactionService.handleOutboundTransaction(
-      createTransactionDto,
-    );
-  }
 }

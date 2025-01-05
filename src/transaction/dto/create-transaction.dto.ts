@@ -43,8 +43,15 @@ export class InternalTransactionDto {
   response_signature?: string;
 }
 
-export class NoMeoExternalTransactionDto {
-  
+// Nomeo bank
+export class ExternalTransactionDto {
+  bank_code: string;
+  sender_account_number: string;
+  recicpient_account_number: string;
+  transaction_amount: string;
+  transaction_message: string;
+  fee_payment_method: string;
+  fee_amount: string;
 }
 
 export class CreateTransactionDto {
