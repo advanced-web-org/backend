@@ -457,6 +457,12 @@ export class TransactionService {
   async handleOutboundTransaction(createTransactionDto: CreateTransactionDto) {
     const bankEndpoint =
       'https://nomeobank.onrender.com/transactions/external/receive';
+    const fromBank = await this.bankService.findOne(Number(process.env.BANK_ID));
+    if (!fromBank) {
+      throw new Error('Bank not found');
+    }
+    const bank_code = fromBank.bank_name;
+
     const toBank = await this.bankService.findOne(
       createTransactionDto.to_bank_id,
     );
@@ -470,6 +476,7 @@ export class TransactionService {
     }
 
     const requestPayload = {
+      bank_code,
       sender_account_number: createTransactionDto.from_account_number,
       recicpient_account_number: createTransactionDto.to_account_number,
       transaction_amount: createTransactionDto.transaction_amount,
