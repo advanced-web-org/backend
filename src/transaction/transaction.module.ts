@@ -15,5 +15,6 @@ import { CustomersModule } from 'src/customers/customers.module';
   ],
   controllers: [TransactionController],
   providers: [TransactionService, PrismaService, AccountsService],
+  exports: [TransactionService],
 })
 export class TransactionModule {}
