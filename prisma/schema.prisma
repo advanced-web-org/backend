@@ -170,6 +170,8 @@ model DebtDeletion {
   deleter_id     Int
   delete_message String?
 
+  created_at DateTime @default(now())
+
   // Relations
   debt    Debt     @relation(fields: [debt_id], references: [debt_id])
   deleter Customer @relation(fields: [deleter_id], references: [customer_id])
