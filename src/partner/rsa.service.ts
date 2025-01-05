@@ -6,11 +6,12 @@ import {
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 import { MakeTransactionBody } from './partner.controller';
+import { EncryptMethod } from 'src/auth/guards/rsa.guard';
 
 @Injectable()
 export class RsaService {
   private privateKey: string;
-  private publicKeys: Record<string, string>;
+  private publicKeys: Record<string, Record<EncryptMethod, string>>;
   private secretKey: string;
 
   constructor() {
@@ -24,8 +25,14 @@ export class RsaService {
 
     try {
       this.publicKeys = {
-        'Bank A': fs.readFileSync('rsa-keys/public.pem', 'utf-8'),
-        'Bank B': fs.readFileSync('rsa-keys/public1.pem', 'utf-8'),
+        'Bank A': {
+          [EncryptMethod.rsa]: fs.readFileSync('rsa-keys/public.pem', 'utf-8'),
+          [EncryptMethod.pgp]: fs.readFileSync('pgp-keys/public.asc', 'utf-8')
+        },
+        'Bank B': {
+          [EncryptMethod.rsa]: fs.readFileSync('rsa-keys/public1.pem', 'utf-8'),
+          [EncryptMethod.pgp]: fs.readFileSync('pgp-keys/public1.asc', 'utf-8')
+        }
       };
     } catch (error) {
       throw new InternalServerErrorException(
@@ -110,6 +117,7 @@ export class RsaService {
     signature: string,
     bankCode: string,
     hashMethod: string = 'sha256',
+    encryptMethod: EncryptMethod,
   ): boolean {
     if (!data || !signature || !bankCode) {
       throw new BadRequestException(
@@ -117,10 +125,10 @@ export class RsaService {
       );
     }
 
-    const publicKey = this.publicKeys[bankCode];
+    const publicKey = this.publicKeys[bankCode][encryptMethod];
     if (!publicKey) {
       throw new BadRequestException(
-        `Bank with code ${bankCode} is not registered`,
+        `Bank with code ${bankCode} is not registered with ${encryptMethod} encryption`,
       );
     }
 
@@ -141,7 +149,7 @@ export class RsaService {
       throw new BadRequestException('Data to encrypt is required');
     }
 
-    const publicKey = this.publicKeys[bankCode];
+    const publicKey = this.publicKeys[bankCode][EncryptMethod.rsa];
     if (!publicKey) {
       throw new BadRequestException(
         `Bank with code ${bankCode} is not registered`,
@@ -263,8 +271,8 @@ export class RsaService {
     return sign.sign(privateKey, 'hex');
   }
 
-  getPublicKey(bankCode: string): string {
-    return this.publicKeys[bankCode];
+  getPublicKey(bankCode: string, encryptMethod: EncryptMethod): string {
+    return this.publicKeys[bankCode][encryptMethod];
   }
 }
 
@@ -322,6 +330,7 @@ async function runTests() {
     transaction.signature!,
     transaction.payload.fromBankCode,
     transaction.header.hashMethod,
+    EncryptMethod.rsa,
   );
   console.log('Signature Valid:', isSignatureValid);
 
@@ -391,7 +400,7 @@ async function verifyResponse() {
   verify.update(decryptedData);
   verify.end();
   const isSignatureValid = verify.verify(
-    rsaService.getPublicKey('Bank A'),
+    rsaService.getPublicKey('Bank A', EncryptMethod.rsa),
     response.signature,
     'hex',
   );

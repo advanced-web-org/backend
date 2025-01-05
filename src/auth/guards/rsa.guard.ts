@@ -7,9 +7,14 @@ import {
 import { Observable } from 'rxjs';
 import { RsaService } from 'src/partner/rsa.service';
 
+export enum EncryptMethod {
+  rsa = 'rsa',
+  pgp = 'pgp',
+}
+
 @Injectable()
 export class RsaGuard implements CanActivate {
-  constructor(private readonly rsaService: RsaService) {}
+  constructor(private readonly rsaService: RsaService) { }
 
   canActivate(
     context: ExecutionContext,
@@ -19,7 +24,13 @@ export class RsaGuard implements CanActivate {
     const payload = JSON.parse(this.rsaService.decrypt(encryptedPayload));
     const hashMethod = header.hashMethod;
     const { fromBankCode } = payload;
+    // Assign default encryption method if null
+    const encryptMethod: EncryptMethod = header.encryptMethod || EncryptMethod.rsa;
 
+    // Validate non-default encryptMethod
+    if (!Object.values(EncryptMethod).includes(encryptMethod)) {
+      throw new ForbiddenException(`Encryption method '${header.encryptMethod}' is not supported`);
+    }
 
     console.log('PAYLOAD:', payload);
 
@@ -47,6 +58,7 @@ export class RsaGuard implements CanActivate {
           signature,
           fromBankCode,
           hashMethod,
+          encryptMethod
         )
       ) {
         throw new ForbiddenException('Signature is invalid');
