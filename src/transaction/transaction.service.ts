@@ -1,17 +1,21 @@
+import { HttpService } from '@nestjs/axios';
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { Account, Bank, Prisma, Transaction } from '@prisma/client';
+import { AccountsService } from 'src/accounts/accounts.service';
+import { BankService } from 'src/bank/bank.service';
+import { CustomersService } from 'src/customers/customers.service';
+import { AppMailerService } from 'src/mailer/mailer.service';
+import { OtpService } from 'src/otp/otp.service';
+import { OtpData } from 'src/otp/types/otp-data.type';
+import { RsaService } from 'src/partner/rsa.service';
+import { PrismaService } from 'src/prisma.service';
 import {
   CreateTransactionDto,
   ExternalTransactionDto,
   InternalTransactionDto,
 } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
-import { PrismaService } from 'src/prisma.service';
-import { Prisma, trans_type, Transaction } from '@prisma/client';
-import { AccountsService } from 'src/accounts/accounts.service';
-import { OtpService } from 'src/otp/otp.service';
-import { AppMailerService } from 'src/mailer/mailer.service';
-import { CustomersService } from 'src/customers/customers.service';
-import { OtpData } from 'src/otp/types/otp-data.type';
+import { AxiosError } from 'axios';
 
 @Injectable()
 export class TransactionService {
@@ -21,6 +25,9 @@ export class TransactionService {
     private readonly otpService: OtpService,
     private readonly mailerService: AppMailerService,
     private readonly customerService: CustomersService,
+    private readonly rsaService: RsaService,
+    private readonly httpService: HttpService,
+    private readonly bankService: BankService,
   ) {}
 
   async createInternalTransaction(
@@ -152,10 +159,6 @@ export class TransactionService {
     });
   }
 
-  async createExternalTransaction(payload: ExternalTransactionDto) {
-    return `This action adds a new transaction for external`;
-  }
-
   async findAll(bankId: number, accountNumber: string) {
     const sendTransactions = await this.findSent(bankId, accountNumber);
     const receivedTransactions = await this.findReceived(bankId, accountNumber);
@@ -277,85 +280,79 @@ export class TransactionService {
     return transactions;
   }
 
-  async findExternalBalance(bankId: number, externalBankId: string) {
-    if (!externalBankId) {
-      const transactions = await this.prisma.transaction.findMany({
-        where: {
-          OR: [
-            {
-              from_bank_id: bankId,
-            },
-            {
-              to_bank_id: bankId,
-            },
-          ],
-          NOT: {
-            from_bank_id: bankId,
-            to_bank_id: bankId,
-          },
-        },
-        include: {
-          from_bank: true,
-          to_bank: true,
-        },
-      });
+  async findExternalBalance(bankId: number, externalBankId?: string) {
+    return externalBankId
+      ? await this.getBalanceForSpecificBank(bankId, Number(externalBankId))
+      : await this.getBalancesForAllBanks(bankId);
+  }
 
-      const groupedBalances = transactions.reduce<{
-        [key: string]: { amount: number; bankName: string };
-      }>((acc, transaction) => {
-        const key = [transaction.from_bank_id, transaction.to_bank_id]
-          .sort()
-          .join('-');
-        if (!acc[key]) {
-          acc[key] = { amount: 0, bankName: '' };
-        }
-        acc[key].amount += Number(transaction.transaction_amount);
-        acc[key].bankName =
-          transaction.from_bank_id === bankId
-            ? transaction.to_bank?.bank_name || ''
-            : transaction.from_bank?.bank_name || '';
-        return acc;
-      }, {});
-
-      return Object.keys(groupedBalances).map((key) => {
-        const [fromBankId, toBankId] = key.split('-').map(Number);
-        return {
-          bankId: fromBankId === bankId ? toBankId : fromBankId,
-          bankName: groupedBalances[key].bankName,
-          totalBalance: groupedBalances[key].amount,
-        };
-      });
-    } else {
-      const totalBalance = await this.prisma.transaction.aggregate({
-        _sum: {
-          transaction_amount: true,
+  private async getBalancesForAllBanks(bankId: number) {
+    const transactions = await this.prisma.transaction.findMany({
+      where: {
+        OR: [{ from_bank_id: bankId }, { to_bank_id: bankId }],
+        NOT: {
+          from_bank_id: bankId,
+          to_bank_id: bankId,
         },
-        where: {
-          OR: [
-            {
-              from_bank_id: bankId,
-              to_bank_id: Number(externalBankId),
-            },
-            {
-              from_bank_id: Number(externalBankId),
-              to_bank_id: bankId,
-            },
-          ],
-        },
-      });
+      },
+      include: {
+        from_bank: true,
+        to_bank: true,
+      },
+    });
 
-      const bank = await this.prisma.bank.findUnique({
-        where: {
-          bank_id: Number(externalBankId),
-        },
-      });
+    const groupedBalances = transactions.reduce<{
+      [key: string]: { amount: number; bankName: string };
+    }>((acc, transaction) => {
+      const key = [transaction.from_bank_id, transaction.to_bank_id]
+        .sort()
+        .join('-');
+      if (!acc[key]) {
+        acc[key] = { amount: 0, bankName: '' };
+      }
+      acc[key].amount += Number(transaction.transaction_amount);
+      acc[key].bankName =
+        transaction.from_bank_id === bankId
+          ? transaction.to_bank?.bank_name || ''
+          : transaction.from_bank?.bank_name || '';
+      return acc;
+    }, {});
 
+    return Object.keys(groupedBalances).map((key) => {
+      const [fromBankId, toBankId] = key.split('-').map(Number);
       return {
-        bankId: Number(externalBankId),
-        bankName: bank?.bank_name,
-        totalBalance: totalBalance._sum.transaction_amount,
+        bankId: fromBankId === bankId ? toBankId : fromBankId,
+        bankName: groupedBalances[key].bankName,
+        totalBalance: groupedBalances[key].amount,
       };
-    }
+    });
+  }
+
+  private async getBalanceForSpecificBank(
+    bankId: number,
+    externalBankId: number,
+  ) {
+    const totalBalance = await this.prisma.transaction.aggregate({
+      _sum: {
+        transaction_amount: true,
+      },
+      where: {
+        OR: [
+          { from_bank_id: bankId, to_bank_id: externalBankId },
+          { from_bank_id: externalBankId, to_bank_id: bankId },
+        ],
+      },
+    });
+
+    const bank = await this.prisma.bank.findUnique({
+      where: { bank_id: externalBankId },
+    });
+
+    return {
+      bankId: externalBankId,
+      bankName: bank?.bank_name || '',
+      totalBalance: totalBalance._sum.transaction_amount || 0,
+    };
   }
 
   findOne(id: number) {
@@ -402,8 +399,200 @@ export class TransactionService {
       ? await this.createInternalTransaction(
           payload.data as InternalTransactionDto,
         )
-      : await this.createExternalTransaction(
-          payload.data as ExternalTransactionDto,
+      : await this.makeOutboundTransaction(
+          payload.data as InternalTransactionDto,
         );
+  }
+
+  async handleInboundTransaction(
+    internalTransactionPayload: InternalTransactionDto,
+  ) {
+    // check if the to account exists
+    await this.findAccount(
+      internalTransactionPayload.to_account_number,
+      'Destination account not found',
+    );
+
+    await this.processTransaction(internalTransactionPayload, [
+      {
+        accountNumber: internalTransactionPayload.to_account_number,
+        balanceUpdate:
+          internalTransactionPayload.transaction_amount -
+          (internalTransactionPayload.fee_payer === 'to'
+            ? internalTransactionPayload.fee_amount
+            : 0),
+      },
+    ]);
+  }
+
+  // Nomeo bank
+  async makeOutboundTransaction(
+    internalTransactionPayload: InternalTransactionDto,
+  ) {
+    const fromBank = await this.getBankById(Number(process.env.BANK_ID));
+    const toBank = await this.getBankById(
+      internalTransactionPayload.to_bank_id,
+    );
+
+    const requestPayload = this.buildRequestPayload(
+      internalTransactionPayload,
+      fromBank.bank_name ?? '',
+    );
+
+
+    const { encryptedPayload, hashedPayload, signature } =
+      this.createSecureRequest(requestPayload, toBank.bank_name ?? '');
+
+    const response = await this.sendRequestToBank(
+      'https://nomeobank.onrender.com/transactions/external/receive',
+      { encryptedPayload, hashedPayload, signature },
+    );
+
+    const responseData = this.processBankResponse(
+      response,
+      toBank.bank_name ?? '',
+    );
+
+    internalTransactionPayload.request_signature = signature;
+    internalTransactionPayload.response_signature =
+      responseData.responseSignature;
+
+    await this.findAccount(
+      internalTransactionPayload.from_account_number ?? '',
+      'Sender account not found',
+    );
+
+    await this.processTransaction(internalTransactionPayload, [
+      {
+        accountNumber: internalTransactionPayload.from_account_number!,
+        balanceUpdate:
+          internalTransactionPayload.transaction_amount -
+          (internalTransactionPayload.fee_payer === 'to'
+            ? internalTransactionPayload.fee_amount
+            : 0),
+      },
+    ]);
+  }
+
+  private async getBankById(bankId: number): Promise<Bank> {
+    const bank = await this.bankService.findOne(bankId);
+    if (!bank) {
+      throw new Error('Bank not found');
+    }
+    if (!bank.bank_name) {
+      throw new Error('Bank code not found');
+    }
+    return bank;
+  }
+
+  private buildRequestPayload(
+    internalTransactionPayload: InternalTransactionDto,
+    bankCode: string,
+  ): ExternalTransactionDto {
+    return {
+      bank_code: bankCode,
+      sender_account_number:
+        internalTransactionPayload.from_account_number ?? '',
+      recipient_account_number: internalTransactionPayload.to_account_number,
+      transaction_amount:
+        internalTransactionPayload.transaction_amount.toString(),
+      transaction_message: internalTransactionPayload.transaction_message,
+      fee_payment_method:
+        internalTransactionPayload.fee_payer === 'from'
+          ? 'SENDER'
+          : 'RECIPIENT',
+      fee_amount: internalTransactionPayload.fee_amount.toString(),
+      timestamp: Math.floor(Date.now() / 1000).toString(),
+    };
+  }
+
+  private createSecureRequest(
+    requestPayload: ExternalTransactionDto,
+    toBankCode: string,
+  ) {
+    const encryptedPayload = this.rsaService.encrypt(
+      JSON.stringify(requestPayload),
+      toBankCode,
+    );
+    const hashedPayload = this.rsaService.hashData(
+      encryptedPayload,
+      'sha256',
+    );
+    const signature = this.rsaService.createSignature(
+      encryptedPayload,
+      'sha256',
+    );
+
+    return { encryptedPayload, hashedPayload, signature };
+  }
+
+  private async sendRequestToBank(endpoint: string, request: object) {
+    try {
+      const response = await this.httpService
+        .post(endpoint, request)
+        .toPromise();
+      if (response?.data.message !== 'Transaction created successfully') {
+        throw new Error('Transaction failed');
+      }
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to send request to bank: ${error.message}`);
+    }
+  }
+
+  private processBankResponse(response: any, toBankCode: string) {
+    const encryptedData = response.data.encryptedPayload;
+    const responseSignature = response.data.signature;
+    const decryptedData = this.rsaService.decrypt(encryptedData);
+    const isVerified = this.rsaService.verifySignature(
+      encryptedData,
+      responseSignature,
+      toBankCode,
+    );
+
+    if (!isVerified) {
+      throw new Error('Invalid response signature');
+    }
+
+    return { decryptedData: JSON.parse(decryptedData), responseSignature };
+  }
+
+  private async findAccount(
+    accountNumber: string,
+    errorMessage: string,
+  ): Promise<Account> {
+    const account =
+      await this.accountService.findOnebyAccountNumber(accountNumber);
+    if (!account) {
+      throw new Error(errorMessage);
+    }
+    return account;
+  }
+
+  private async processTransaction(
+    payload: InternalTransactionDto,
+    balanceUpdates: { accountNumber: string; balanceUpdate: number }[],
+  ) {
+    await this.prisma.$transaction(async (transactionalPrisma) => {
+      for (const update of balanceUpdates) {
+        console.log('UPDATE: ', update)
+        await transactionalPrisma.account.update({
+          where: { account_number: update.accountNumber },
+          data: {
+            account_balance: {
+              increment: update.balanceUpdate,
+            },
+          },
+        });
+      }
+
+      await transactionalPrisma.transaction.create({
+        data: {
+          ...payload,
+          transaction_amount: new Prisma.Decimal(payload.transaction_amount),
+          fee_amount: new Prisma.Decimal(payload.fee_amount),
+        },
+      });
+    });
   }
 }

@@ -36,4 +36,21 @@ export class BankService {
   remove(id: number) {
     return `This action removes a #${id} bank`;
   }
+
+  getBankById(bankId: number) {
+    return this.prisma.bank.findFirst({
+      where: {
+        bank_id: bankId,
+      },
+    });
+  }
+
+  getBankByName(bankName: string) {
+    // assume that the bank code is bank name in database
+    return this.prisma.bank.findFirst({
+      where: {
+        bank_name: bankName,
+      },
+    });
+  }
 }

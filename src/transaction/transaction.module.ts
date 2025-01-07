@@ -6,15 +6,25 @@ import { TransactionService } from './transaction.service';
 import { OtpModule } from 'src/otp/otp.module';
 import { AppMailerModule } from 'src/mailer/mailer.module';
 import { CustomersModule } from 'src/customers/customers.module';
+import { HttpModule } from '@nestjs/axios';
+import { RsaService } from 'src/partner/rsa.service';
+import { BankService } from 'src/bank/bank.service';
 
 @Module({
   imports: [
     OtpModule,
     AppMailerModule,
-    CustomersModule
+    CustomersModule,
+    HttpModule
   ],
   controllers: [TransactionController],
-  providers: [TransactionService, PrismaService, AccountsService],
-  exports: [TransactionService],
+  providers: [
+    TransactionService,
+    PrismaService,
+    AccountsService,
+    RsaService,
+    BankService,
+  ],
+  exports: [TransactionService]
 })
 export class TransactionModule {}

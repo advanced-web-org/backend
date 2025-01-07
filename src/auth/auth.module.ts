@@ -8,9 +8,9 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { PassportModule } from '@nestjs/passport';
 import { StaffsService } from 'src/staffs/staffs.service';
-import { AccountsService } from 'src/accounts/accounts.service';
 import { OtpModule } from 'src/otp/otp.module';
 import { AppMailerModule } from 'src/mailer/mailer.module';
+import { AccountsModule } from 'src/accounts/accounts.module';
 
 @Module({
   imports: [
@@ -20,7 +20,8 @@ import { AppMailerModule } from 'src/mailer/mailer.module';
     }),
     PassportModule,
     OtpModule,
-    AppMailerModule
+    AppMailerModule,
+    AccountsModule
   ],
   controllers: [AuthController],
   providers: [
@@ -30,7 +31,6 @@ import { AppMailerModule } from 'src/mailer/mailer.module';
     StaffsService,
     LocalStrategy,
     JwtStrategy,
-    AccountsService,
   ],
 })
 export class AuthModule {}

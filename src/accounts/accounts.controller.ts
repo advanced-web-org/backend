@@ -11,6 +11,7 @@ import { AccountsService } from './accounts.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ExternalAccountDto } from './dto/external-account.dto';
 
 @ApiTags('accounts')
 @Controller('accounts')
@@ -50,4 +51,16 @@ export class AccountsController {
   remove(@Param('id') id: string) {
     return this.accountsService.remove(+id);
   }
+
+  @ApiOperation({ summary: 'Get external account information' })
+  @Post('external-account-info')
+  async getExternalAccountInfo(@Body() externalAccountDto: ExternalAccountDto): Promise<ExternalAccountResponseDto> {
+    const { accountNumber, bankCode } = externalAccountDto;
+    return await this.accountsService.getExternalAccountInfo(accountNumber, bankCode);
+  }
+}
+
+export interface ExternalAccountResponseDto {
+  account_number: string;
+  fullename: string;
 }

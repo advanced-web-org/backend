@@ -1,0 +1,8 @@
+{
+  "header": {
+    "hashMethod": "SHA256",
+  },
+  "payload": string // encrypted payload with rsa encryption,
+  "integrity": string // sha256(header + encrypted payload + secret key),
+  "signature": string // sign(header, encrypted payload) with private key
+}

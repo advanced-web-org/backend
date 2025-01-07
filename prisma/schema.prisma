@@ -120,7 +120,9 @@ model Transaction {
   transaction_date    DateTime?  @default(now())
   fee_payer           String?
   fee_amount          Decimal?   @default(0.00) @db.Decimal(15, 2)
-  e_signal            String?
+  request_signature   String?
+  response_signature  String?
+
 
   // Relations
   from_bank Bank? @relation("from_bank_id", fields: [from_bank_id], references: [bank_id])
