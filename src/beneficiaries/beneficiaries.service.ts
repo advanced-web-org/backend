@@ -60,8 +60,21 @@ export class BeneficiariesService {
     return `This action returns a #${id} beneficiary`;
   }
 
-  update(id: number, updateBeneficiaryDto: UpdateBeneficiaryDto) {
-    return `This action updates a #${id} beneficiary`;
+  update(id: number, nickname: string) {
+    try {
+      const beneficiary = this.prisma.beneficiary.updateMany({
+        where: {
+          beneficiary_id: id,
+        },
+        data: {
+          nickname,
+        },
+      });
+
+      return beneficiary;
+    } catch (error) {
+      throw new BadRequestException('Could not update beneficiary');
+    }
   }
 
   async remove(beneficiary_id: number): Promise<Beneficiary> {

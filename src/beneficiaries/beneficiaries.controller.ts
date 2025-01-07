@@ -54,7 +54,7 @@ export class BeneficiariesController {
     @Param('id') id: string,
     @Body() updateBeneficiaryDto: UpdateBeneficiaryDto,
   ) {
-    return this.beneficiariesService.update(+id, updateBeneficiaryDto);
+    return this.beneficiariesService.update(+id, updateBeneficiaryDto.nickname);
   }
 
   @ApiOperation({ summary: 'Delete a beneficiary by ID' })
