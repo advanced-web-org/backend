@@ -15,6 +15,7 @@ import {
   InternalTransactionDto,
 } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
+import { AxiosError } from 'axios';
 
 @Injectable()
 export class TransactionService {
@@ -438,12 +439,13 @@ export class TransactionService {
       fromBank.bank_name ?? '',
     );
 
-    const { timestamp, encryptedPayload, hashPayload, signature } =
+
+    const { encryptedPayload, hashedPayload, signature } =
       this.createSecureRequest(requestPayload, toBank.bank_name ?? '');
 
     const response = await this.sendRequestToBank(
       'https://nomeobank.onrender.com/transactions/external/receive',
-      { timestamp, encryptedPayload, hashPayload, signature },
+      { encryptedPayload, hashedPayload, signature },
     );
 
     const responseData = this.processBankResponse(
@@ -462,7 +464,7 @@ export class TransactionService {
 
     await this.processTransaction(internalTransactionPayload, [
       {
-        accountNumber: internalTransactionPayload.to_account_number,
+        accountNumber: internalTransactionPayload.from_account_number!,
         balanceUpdate:
           internalTransactionPayload.transaction_amount -
           (internalTransactionPayload.fee_payer === 'to'
@@ -491,7 +493,7 @@ export class TransactionService {
       bank_code: bankCode,
       sender_account_number:
         internalTransactionPayload.from_account_number ?? '',
-      recicpient_account_number: internalTransactionPayload.to_account_number,
+      recipient_account_number: internalTransactionPayload.to_account_number,
       transaction_amount:
         internalTransactionPayload.transaction_amount.toString(),
       transaction_message: internalTransactionPayload.transaction_message,
@@ -500,6 +502,7 @@ export class TransactionService {
           ? 'SENDER'
           : 'RECIPIENT',
       fee_amount: internalTransactionPayload.fee_amount.toString(),
+      timestamp: Math.floor(Date.now() / 1000).toString(),
     };
   }
 
@@ -511,17 +514,16 @@ export class TransactionService {
       JSON.stringify(requestPayload),
       toBankCode,
     );
-    const hashPayload = this.rsaService.hashData(
-      JSON.stringify(requestPayload),
+    const hashedPayload = this.rsaService.hashData(
+      encryptedPayload,
       'sha256',
     );
-    const timestamp = new Date().toISOString();
     const signature = this.rsaService.createSignature(
-      encryptedPayload + timestamp,
+      encryptedPayload,
       'sha256',
     );
 
-    return { timestamp, encryptedPayload, hashPayload, signature };
+    return { encryptedPayload, hashedPayload, signature };
   }
 
   private async sendRequestToBank(endpoint: string, request: object) {
@@ -539,11 +541,11 @@ export class TransactionService {
   }
 
   private processBankResponse(response: any, toBankCode: string) {
-    const encryptedData = response.data.encryptData;
+    const encryptedData = response.data.encryptedPayload;
     const responseSignature = response.data.signature;
     const decryptedData = this.rsaService.decrypt(encryptedData);
     const isVerified = this.rsaService.verifySignature(
-      decryptedData,
+      encryptedData,
       responseSignature,
       toBankCode,
     );
@@ -573,6 +575,7 @@ export class TransactionService {
   ) {
     await this.prisma.$transaction(async (transactionalPrisma) => {
       for (const update of balanceUpdates) {
+        console.log('UPDATE: ', update)
         await transactionalPrisma.account.update({
           where: { account_number: update.accountNumber },
           data: {
@@ -593,17 +596,3 @@ export class TransactionService {
     });
   }
 }
-
-// Nomeo bank request
-// export interface NomeoBankRequestPayload {
-//   timestamp: string;
-//   signature: string;
-//   hashPayload: string;
-//   payload: {
-//     sender_account_number: string;
-//     recicpient_account_number: string;
-//     transaction_amount: string;
-//     transaction_message: string;
-//     fee_payment_method: string;
-//   };
-// }

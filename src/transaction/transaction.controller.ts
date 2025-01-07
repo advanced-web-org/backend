@@ -103,11 +103,11 @@ export class TransactionController {
     );
   }
 
-  @ApiOperation({ summary: 'Get a transaction by ID' })
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.transactionService.findOne(+id);
-  }
+  // @ApiOperation({ summary: 'Get a transaction by ID' })
+  // @Get(':id')
+  // findOne(@Param('id') id: string) {
+  //   return this.transactionService.findOne(+id);
+  // }
 
   @ApiOperation({ summary: 'Update a transaction by ID' })
   @Patch(':id')
@@ -144,5 +144,27 @@ export class TransactionController {
       body.otpToken,
       body.transaction
     );
+  }
+
+  @Get('test')
+  async test() {
+    const internalTransactionPayload: InternalTransactionDto = {
+      from_bank_id: 1,
+      from_account_number: 'A12345',
+      to_bank_id: 2,
+      to_account_number: 'ACC123456789',
+      transaction_type: 'transaction',
+      transaction_amount: 100,
+      transaction_message: 'Test transaction',
+      fee_payer: 'from',
+      fee_amount: 10,
+    };
+  
+    try {
+      await this.transactionService.makeOutboundTransaction(internalTransactionPayload);
+      console.log('Outbound transaction successful');
+    } catch (error) {
+      console.error('Error making outbound transaction:', error);
+    }
   }
 }

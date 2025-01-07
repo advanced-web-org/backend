@@ -107,7 +107,7 @@ export class RsaService {
       const sign = crypto.createSign(hashMethod);
       sign.update(data);
       sign.end();
-      return sign.sign(this.privateKey, 'hex');
+      return sign.sign(this.privateKey, 'base64');
     } catch (error) {
       throw new InternalServerErrorException(
         `Signing failed: ${error.message}`,
@@ -120,7 +120,7 @@ export class RsaService {
     signature: string,
     bankCode: string,
     hashMethod: string = 'sha256',
-    encryptMethod: EncryptMethod,
+    encryptMethod: EncryptMethod = EncryptMethod.rsa,
   ): boolean {
     if (!data || !signature || !bankCode) {
       throw new BadRequestException(
@@ -139,7 +139,7 @@ export class RsaService {
       const verify = crypto.createVerify(hashMethod);
       verify.update(data);
       verify.end();
-      return verify.verify(publicKey, signature, 'hex');
+      return verify.verify(publicKey, signature, 'base64');
     } catch (error) {
       throw new InternalServerErrorException(
         `Verification failed: ${error.message}`,
@@ -153,6 +153,7 @@ export class RsaService {
     }
 
     const publicKey = this.publicKeys[bankCode][EncryptMethod.rsa];
+    console.log(`PUBLIC KEY OF ${bankCode}: `, publicKey)
     if (!publicKey) {
       throw new BadRequestException(
         `Bank with code ${bankCode} is not registered`,
