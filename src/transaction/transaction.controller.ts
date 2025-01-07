@@ -167,4 +167,14 @@ export class TransactionController {
       console.error('Error making outbound transaction:', error);
     }
   }
+
+  @Post('/external')
+  async makeExternalTransaction(@Body() payload: InternalTransactionDto) {
+    try {
+      await this.transactionService.makeOutboundTransaction(payload);
+      console.log('Outbound transaction successful');
+    } catch (error) {
+      console.error('Error making outbound transaction:', error);
+    }
+  }
 }
