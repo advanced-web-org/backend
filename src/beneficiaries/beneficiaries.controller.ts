@@ -37,9 +37,9 @@ export class BeneficiariesController {
 
   @ApiOperation({ summary: 'Get all beneficiaries' })
   @Get()
-  findAll() {
-    const customerID = 1; // This should be the customer ID of the logged in user
-    return this.beneficiariesService.findAll(customerID);
+  @UseGuards(JwtAuthGuard)
+  findAll(@CurrentUser() user: any) {
+    return this.beneficiariesService.findAll(user.userId);
   }
 
   @ApiOperation({ summary: 'Get a beneficiary by ID' })

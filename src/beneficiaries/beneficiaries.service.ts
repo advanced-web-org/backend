@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { UpdateBeneficiaryDto } from './dto/update-beneficiary.dto';
 import { PrismaService } from 'src/prisma.service';
 import { CustomersService } from 'src/customers/customers.service';
+import { Beneficiary } from '@prisma/client';
 
 @Injectable()
 export class BeneficiariesService {
@@ -63,7 +64,27 @@ export class BeneficiariesService {
     return `This action updates a #${id} beneficiary`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} beneficiary`;
+  async remove(beneficiary_id: number): Promise<Beneficiary> {
+    try {
+      const beneficiary = await this.prisma.beneficiary.findFirst({
+        where: {
+          beneficiary_id,
+        },
+      });
+
+      if (!beneficiary) {
+        throw new BadRequestException('Beneficiary not found');
+      }
+
+      await this.prisma.beneficiary.deleteMany({
+        where: {
+          beneficiary_id,
+        }
+      })
+
+      return beneficiary;
+    } catch (error) {
+      throw new Error(error?.message || 'Something went wrong');
+    }
   }
 }
