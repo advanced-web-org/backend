@@ -14,8 +14,8 @@
     "deleteOutDir": true,
     "assets": [
       {
-        "include": "mailer/templates/**/*",
-        "outDir": "dist/src/"
+        "include": "mailer/templates/**",
+        "outDir": "dist"
       }
     ]
   }

@@ -1,13 +1,5 @@
 export interface DebtNotification {
-  userIdToSend: number;
+  notificationId: number;
   message: string;
-  debtId: number;
   timestamp: string;
-  action: string;
-}
-
-export enum DebtAction {
-  PAID = 'PAID',
-  DELETED = 'DELETED',
-  CREATED = 'CREATED'
 }

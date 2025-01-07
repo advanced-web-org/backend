@@ -25,5 +25,6 @@ import { BankService } from 'src/bank/bank.service';
     RsaService,
     BankService,
   ],
+  exports: [TransactionService]
 })
 export class TransactionModule {}

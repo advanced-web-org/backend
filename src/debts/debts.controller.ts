@@ -93,8 +93,9 @@ export class DebtsController {
   @Delete('/:debt_id')
   async deleteDebt(
     @Param('debt_id', ParseIntPipe) debtId: number,
+    @Body() { delete_message }: { delete_message: string },
     @CurrentUser() user: CurrentUserType,
   ) {
-    return this.debtsService.deleteDebt(debtId, parseInt(user.userId));
+    return this.debtsService.deleteDebt(debtId, delete_message, parseInt(user.userId));
   }
 }

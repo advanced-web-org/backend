@@ -26,6 +26,5 @@ export class RegisterCustomerDto {
 
   @ApiProperty({ description: 'The password of the customer' })
   @IsString()
-  @IsNotEmpty()
   password: string;
 }

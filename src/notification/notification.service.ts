@@ -4,6 +4,7 @@ import { KafkaService } from '../kafka/kafka.service';
 import { DebtNotification } from './types/debt-notification.type';
 import { PrismaService } from 'src/prisma.service';
 import { JwtService } from '@nestjs/jwt';
+import { DebtKafkaMessage } from 'src/debts/debts.service';
 
 // socket-events.ts
 export interface ClientToServerEvents {
@@ -63,28 +64,34 @@ export class NotificationService implements OnModuleInit {
     });
 
     // Kafka consumer for debt notifications
-    this.kafkaService.consume<DebtNotification>(
+    this.kafkaService.consume<DebtKafkaMessage>(
       'debt-notifications',
       'notification-group',
       (message) => this.handleDebtNotification(message)
     );
   }
 
-  async handleDebtNotification(message: DebtNotification) {
-    const { userIdToSend, ...notification } = message;
+  async handleDebtNotification(message: DebtKafkaMessage) {
+    const { userIdToSend, ...kafkaMessage } = message;
 
     // Save notification to the database
-    await this.prisma.notification.create({
+    const savedNoti = await this.prisma.notification.create({
       data: {
-        message: notification.message,
+        message: kafkaMessage.message,
         user_id: userIdToSend,
-        created_at: notification.timestamp,
+        created_at: kafkaMessage.timestamp,
       },
     });
 
+    const liveNoti: DebtNotification = {
+      notificationId: savedNoti.notification_id,
+      message: kafkaMessage.message,
+      timestamp: kafkaMessage.timestamp
+    }
+
     // Emit the notification to the specific user
-    console.log(`Notification sent to user: ${userIdToSend}, message: ${notification.message}`);
-    this.io.to(String(userIdToSend)).emit('debtNotifications', notification);
+    console.log(`Notification sent to user: ${userIdToSend}, message: ${kafkaMessage.message}`);
+    this.io.to(String(userIdToSend)).emit('debtNotifications', liveNoti);
   }
 
   async getNotifications(userId: number) {

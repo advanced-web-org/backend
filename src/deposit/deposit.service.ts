@@ -1,41 +1,29 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaService } from 'src/prisma.service';
+import { TransactionService } from 'src/transaction/transaction.service';
 import { CreateDepositDto } from './dto/create-deposit.dto';
 import { UpdateDepositDto } from './dto/update-deposit.dto';
-import { PrismaService } from 'src/prisma.service';
-import { Prisma } from '@prisma/client';
-import { TransactionService } from 'src/transaction/transaction.service';
-import { InternalTransactionDto } from 'src/transaction/dto/create-transaction.dto';
 
 @Injectable()
 export class DepositService {
   constructor(
-    private prisma: PrismaService,
+    private readonly prisma: PrismaService,
+    private readonly transactionService: TransactionService,
   ) {}
 
   async create(createDepositDto: CreateDepositDto) {
-    return await this.prisma.$transaction(async (transactionPrisma) => {
-      const { transaction, ...rest } = createDepositDto;
-      const transactionPayload = transaction.data as InternalTransactionDto;
+    const { employee_id, transaction } = createDepositDto;
 
-      const createdTransaction = await transactionPrisma.transaction.create({
-        data: {
-          ...transaction,
-          transaction_amount: new Prisma.Decimal(
-            transactionPayload.transaction_amount,
-          ),
-          fee_amount: new Prisma.Decimal(transactionPayload.fee_amount),
-        },
-      });
+    const transactionData =
+      await this.transactionService.createInternalTransaction(transaction);
 
-      // TODO
-      // Add account balance update logic here
+    console.log(transactionData);
 
-      return transactionPrisma.deposit.create({
-        data: {
-          transaction_id: createdTransaction.transaction_id,
-          employee_id: rest.employee_id,
-        },
-      });
+    return this.prisma.deposit.create({
+      data: {
+        employee_id,
+        transaction_id: transactionData.transaction_id,
+      },
     });
   }
 
