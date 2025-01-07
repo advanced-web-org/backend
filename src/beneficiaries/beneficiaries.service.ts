@@ -1,14 +1,38 @@
-import { Injectable } from '@nestjs/common';
-import { CreateBeneficiaryDto } from './dto/create-beneficiary.dto';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { UpdateBeneficiaryDto } from './dto/update-beneficiary.dto';
 import { PrismaService } from 'src/prisma.service';
+import { CustomersService } from 'src/customers/customers.service';
 
 @Injectable()
 export class BeneficiariesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly customerService: CustomersService,
+  ) {}
 
-  create(createBeneficiaryDto: CreateBeneficiaryDto) {
-    return 'This action adds a new beneficiary';
+  async create(
+    customerId: number,
+    bank_id: number,
+    account_number: string,
+    nickname?: string,
+  ) {
+    try {
+      if (!nickname) {
+        nickname = await this.customerService.getCustomerByAccountNumber(account_number).then((customer) => customer.full_name)
+      }
+  
+      const bene = await this.prisma.beneficiary.create({
+        data: {
+          account_number,
+          nickname,
+          bank_id,
+          customer_id: customerId,
+        },
+      });
+      return bene;
+    } catch (error) {
+      throw new BadRequestException(`Could not create beneficiary ${error.message}`);
+    }
   }
 
   async findAll(customerID: number) {
