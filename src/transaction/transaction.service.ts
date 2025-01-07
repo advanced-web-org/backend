@@ -396,7 +396,7 @@ export class TransactionService {
       throw new BadRequestException('User not found');
     }
 
-    // await this.otpService.verifyOtpToken(otp, otpToken, userId);
+    await this.otpService.verifyOtpToken(otp, otpToken, userId);
 
     return payload.type === 'internal'
       ? await this.createInternalTransaction(
