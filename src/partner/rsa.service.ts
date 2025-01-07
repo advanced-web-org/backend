@@ -43,7 +43,7 @@ export class RsaService {
       );
     }
 
-    this.secretKey = process.env.SECRET_KEY || 'default-secret-key';
+    this.secretKey = process.env.SECRET_KEY || 'TECHBANK_NOMEOBANK';
   }
 
   isBankRegistered(bankCode: string): boolean {
@@ -187,6 +187,7 @@ export class RsaService {
     }
   }
 
+
   publicDecrypt(encryptedData: string, publicKey: string): string {
     if (!encryptedData) {
       throw new BadRequestException('Encrypted data is required');
@@ -215,6 +216,22 @@ export class RsaService {
     } catch (error) {
       throw new InternalServerErrorException(
         `Encryption failed: ${error.message}`,
+      );
+    }
+  }
+
+  privateDecrypt(encryptedData: string): string {
+    if (!encryptedData) {
+      throw new BadRequestException('Encrypted data is required');
+    }
+
+    try {
+      const buffer = Buffer.from(encryptedData, 'base64');
+      const decrypted = crypto.privateDecrypt(this.privateKey, buffer);
+      return decrypted.toString();
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Decryption failed: ${error.message}`,
       );
     }
   }
@@ -275,7 +292,7 @@ export class RsaService {
     return sign.sign(privateKey, 'hex');
   }
 
-  getPublicKey(bankCode: string, encryptMethod: EncryptMethod): string {
+  getPublicKey(bankCode: string, encryptMethod: EncryptMethod = EncryptMethod.rsa): string {
     return this.publicKeys[bankCode][encryptMethod];
   }
 }

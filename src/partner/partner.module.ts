@@ -26,5 +26,6 @@ import { RsaService } from './rsa.service';
     CustomersService,
     AccountsService
   ],
+  exports: [RsaService]
 })
 export class PartnerModule {}
