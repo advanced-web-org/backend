@@ -36,6 +36,14 @@ export class AccountsService {
     });
   }
 
+  findOneByCustomerId(customerId: number) {
+    return this.prismaService.account.findFirst({
+      where: {
+        customer_id: customerId,
+      },
+    });
+  }
+
   update(id: number, updateAccountDto: UpdateAccountDto) {
     return `This action updates a #${id} account`;
   }
