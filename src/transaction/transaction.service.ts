@@ -502,7 +502,8 @@ export class TransactionService {
           ? 'SENDER'
           : 'RECIPIENT',
       fee_amount: internalTransactionPayload.fee_amount.toString(),
-      timestamp: Math.floor(Date.now() / 1000).toString(),
+      // current milliseconds
+      timestamp: new Date().getTime().toString(),
     };
   }
 

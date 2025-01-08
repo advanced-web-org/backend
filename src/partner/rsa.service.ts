@@ -55,10 +55,9 @@ export class RsaService {
 
   isRequestFresh(
     requestTimestamp: number,
-    thresholdInMillis: number = 3600000,
+    thresholdInMillis: number = 30000, // 30 seconds
   ): boolean {
     if (!requestTimestamp || isNaN(requestTimestamp)) {
-      console.log('TIMESTAMP:', requestTimestamp);
       throw new BadRequestException('Invalid request timestamp');
     }
 
@@ -153,7 +152,6 @@ export class RsaService {
     }
 
     const publicKey = this.publicKeys[bankCode][EncryptMethod.rsa];
-    console.log(`PUBLIC KEY OF ${bankCode}: `, publicKey)
     if (!publicKey) {
       throw new BadRequestException(
         `Bank with code ${bankCode} is not registered`,
