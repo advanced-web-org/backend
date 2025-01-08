@@ -1,4 +1,9 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateBeneficiaryDto } from './create-beneficiary.dto';
+import { ApiProperty, ApiSchema } from '@nestjs/swagger';
+import { IsString } from 'class-validator';
 
-export class UpdateBeneficiaryDto extends PartialType(CreateBeneficiaryDto) {}
+@ApiSchema({ name: 'Update Beneficiary DTO description' })
+export class UpdateBeneficiaryDto {
+  @ApiProperty({ description: 'nickname' })
+  @IsString()
+  nickname: string;
+}
