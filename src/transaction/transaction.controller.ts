@@ -10,13 +10,16 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
-import { CreateTransactionDto, InternalTransactionDto } from './dto/create-transaction.dto';
+import {
+  CreateTransactionDto,
+  InternalTransactionDto,
+} from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
 import { CurrentUser } from 'src/auth/decorators/user.decorator';
 
-@ApiTags('transactions')
+@ApiTags('Transactions API')
 @Controller('transactions')
 export class TransactionController {
   constructor(private readonly transactionService: TransactionService) {}
@@ -126,9 +129,7 @@ export class TransactionController {
 
   @UseGuards(JwtAuthGuard)
   @Post('request_otp')
-  async requestOtp(
-    @CurrentUser() user: any,
-  ) {
+  async requestOtp(@CurrentUser() user: any) {
     return this.transactionService.requestOtpForTransaction(user.userId);
   }
 
@@ -136,13 +137,14 @@ export class TransactionController {
   @Post('verify_otp')
   async verifyOtp(
     @CurrentUser() user: any,
-    @Body() body: { otp: string, otpToken: string, transaction: CreateTransactionDto }
+    @Body()
+    body: { otp: string; otpToken: string; transaction: CreateTransactionDto },
   ) {
     return this.transactionService.verifyOtpForTransaction(
       user.userId,
       body.otp,
       body.otpToken,
-      body.transaction
+      body.transaction,
     );
   }
 

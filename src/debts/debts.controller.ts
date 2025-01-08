@@ -21,7 +21,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
 import { CurrentUserType } from 'src/auth/types/current-user.type';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
-@ApiTags('debts')
+@ApiTags('Debts API')
 @UseGuards(JwtAuthGuard)
 @Controller('debts')
 export class DebtsController {

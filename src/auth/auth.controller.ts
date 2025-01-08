@@ -12,7 +12,7 @@ import {
 } from './dto';
 import { JwtAuthGuard } from './guards/jwt.guard';
 
-@ApiTags('auth')
+@ApiTags('Authentication API')
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
@@ -34,6 +34,17 @@ export class AuthController {
           fullName: 'John Doe',
           email: 'john.doe@example.com',
         },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request',
+    schema: {
+      example: {
+        statusCode: 400,
+        message: 'Bad Request',
+        error: 'Bad Request',
       },
     },
   })
@@ -90,12 +101,18 @@ export class AuthController {
   }
 
   @Post('forgot_password/verify_otp')
-  async verifyOtp(@Body() body: { username: string, otp: string, otpToken: string }) {
-    return this.authService.verifyOtpForPasswordReset(body.username, body.otp, body.otpToken);
+  async verifyOtp(
+    @Body() body: { username: string; otp: string; otpToken: string },
+  ) {
+    return this.authService.verifyOtpForPasswordReset(
+      body.username,
+      body.otp,
+      body.otpToken,
+    );
   }
 
   @Post('forgot_password/reset_password')
-  async resetPassword(@Body() body: { username: string, newPassword: string }) {
+  async resetPassword(@Body() body: { username: string; newPassword: string }) {
     return this.authService.resetPassword(body.username, body.newPassword);
   }
 }

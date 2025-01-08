@@ -12,7 +12,7 @@ import { CreateDepositDto } from './dto/create-deposit.dto';
 import { UpdateDepositDto } from './dto/update-deposit.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
-@ApiTags('deposits')
+@ApiTags('Deposits API')
 @Controller('deposits')
 export class DepositController {
   constructor(private readonly depositService: DepositService) {}

@@ -13,7 +13,7 @@ import { CustomersService } from './customers.service';
 import { UpdateCustomerDto } from './dto';
 import { CreateCustomerDto } from './dto/createCustomer.dto';
 
-@ApiTags('customers')
+@ApiTags('Customers API')
 @Controller('customers')
 export class CustomersController {
   constructor(
@@ -38,7 +38,7 @@ export class CustomersController {
   findByAccountNumber(@Param('accountNumber') accountNumber: string) {
     return this.customersService.findByAccountNumber(accountNumber);
   }
-  
+
   @ApiOperation({ summary: 'Get all customers with accounts' })
   @Get('with-accounts')
   findAllWithAccounts() {

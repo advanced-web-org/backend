@@ -20,7 +20,7 @@ import { Role } from 'src/auth/interfaces';
 import { RoleGuard } from 'src/auth/guards/role.guard';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
-@ApiTags('users')
+@ApiTags('Users API')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}

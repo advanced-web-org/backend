@@ -4,7 +4,7 @@ import { CreateStaffDto } from './dto/createStaff.dto';
 import { UpdateStaffDto } from './dto/updateStaff.dto';
 import { ApiOperation, ApiTags, ApiProperty, ApiBody } from '@nestjs/swagger';
 
-@ApiTags('staffs')
+@ApiTags('Staffs API')
 @Controller('staffs')
 export class StaffsController {
   constructor(private readonly staffsService: StaffsService) {}

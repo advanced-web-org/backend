@@ -9,22 +9,34 @@ import {
 
 @ApiSchema({ name: 'RegisterCustomerDto description' })
 export class RegisterCustomerDto {
-  @ApiProperty({ description: 'The full name of the customer' })
+  @ApiProperty({
+    example: 'Thieu Lac Quan',
+    description: 'The full name of the customer',
+  })
   @IsString()
   @IsNotEmpty()
   fullName: string;
 
-  @ApiProperty({ description: 'The email of the customer' })
+  @ApiProperty({
+    example: 'quanlac@gmail.com',
+    description: 'The email of the customer',
+  })
   @IsEmail()
   @IsNotEmpty()
   email: string;
 
-  @ApiProperty({ description: 'The phone number of the customer' })
+  @ApiProperty({
+    example: '0293849328',
+    description: 'The phone number of the customer',
+  })
   @IsPhoneNumber('VN')
   @IsNotEmpty()
   phone: string;
 
-  @ApiProperty({ description: 'The password of the customer' })
+  @ApiProperty({
+    example: 'notpasss',
+    description: 'The password of the customer',
+  })
   @IsString()
   password: string;
 }

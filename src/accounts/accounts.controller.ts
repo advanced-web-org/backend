@@ -13,7 +13,7 @@ import { UpdateAccountDto } from './dto/update-account.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ExternalAccountDto } from './dto/external-account.dto';
 
-@ApiTags('accounts')
+@ApiTags('Accounts API')
 @Controller('accounts')
 export class AccountsController {
   constructor(private readonly accountsService: AccountsService) {}

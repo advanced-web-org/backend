@@ -3,16 +3,22 @@ import { trans_type } from '@prisma/client';
 
 @ApiSchema({ name: 'CreateTransactionDto description' })
 export class InternalTransactionDto {
-  @ApiProperty({ description: 'The bank id of the sender' })
+  @ApiProperty({ example: 1, description: 'The bank id of the sender' })
   from_bank_id: number;
 
-  @ApiProperty({ description: 'The bank account number of the sender' })
+  @ApiProperty({
+    example: '20334',
+    description: 'The bank account number of the sender',
+  })
   from_account_number?: string;
 
-  @ApiProperty({ description: 'The bank id of the receiver' })
+  @ApiProperty({ example: 1, description: 'The bank id of the receiver' })
   to_bank_id: number;
 
-  @ApiProperty({ description: 'The bank account number of the receiver' })
+  @ApiProperty({
+    example: '103849',
+    description: 'The bank account number of the receiver',
+  })
   to_account_number: string;
 
   @ApiProperty({
@@ -21,10 +27,13 @@ export class InternalTransactionDto {
   })
   transaction_type: trans_type;
 
-  @ApiProperty({ description: 'The amount of the transaction' })
+  @ApiProperty({ example: 1020, description: 'The amount of the transaction' })
   transaction_amount: number;
 
-  @ApiProperty({ description: 'The message of the transaction' })
+  @ApiProperty({
+    example: 'car payment',
+    description: 'The message of the transaction',
+  })
   transaction_message: string;
 
   @ApiProperty({
@@ -33,7 +42,7 @@ export class InternalTransactionDto {
   })
   fee_payer?: string;
 
-  @ApiProperty({ description: 'The fee amount of the transaction' })
+  @ApiProperty({ example: 1, description: 'The fee amount of the transaction' })
   fee_amount: number;
 
   @ApiProperty({ description: 'The request signature of the transaction' })

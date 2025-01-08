@@ -15,7 +15,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
 import { CurrentUser } from 'src/auth/decorators/user.decorator';
 
-@ApiTags('beneficiaries')
+@ApiTags('Beneficiaries API')
 @Controller('beneficiaries')
 export class BeneficiariesController {
   constructor(private readonly beneficiariesService: BeneficiariesService) {}
