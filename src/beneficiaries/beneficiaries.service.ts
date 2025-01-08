@@ -100,4 +100,25 @@ export class BeneficiariesService {
       throw new Error(error?.message || 'Something went wrong');
     }
   }
+
+  async getBeneficiaryByScope(customerID: number, isInternal: boolean) {
+    const beneficiaries = await this.prisma.beneficiary.findMany({
+      where: {
+        customer_id: customerID,
+        bank_id: isInternal ? 1 : 2,
+      },
+      select: {
+        beneficiary_id: true,
+        account_number: true,
+        nickname: true,
+        bank: {
+          select: {
+            bank_name: true,
+          },
+        },
+      },
+    });
+
+    return beneficiaries;
+  }
 }

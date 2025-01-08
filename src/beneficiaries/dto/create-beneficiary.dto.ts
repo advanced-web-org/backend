@@ -1,5 +1,5 @@
 import { ApiProperty, ApiSchema } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 @ApiSchema({ name: 'Create Beneficiary DTO description' })
 export class CreateBeneficiaryDto {
@@ -14,5 +14,6 @@ export class CreateBeneficiaryDto {
   account_number: string;
 
   @ApiProperty({ description: 'nickname' })
+  @IsOptional()
   nickname?: string;
 }

@@ -62,4 +62,18 @@ export class BeneficiariesController {
   remove(@Param('id') id: string) {
     return this.beneficiariesService.remove(+id);
   }
+
+  @ApiOperation({ summary: 'Get internal beneficiary' })
+  @Post('internal')
+  @UseGuards(JwtAuthGuard)  
+  getInternalBeneficiary(@CurrentUser() user: any) {
+    return this.beneficiariesService.getBeneficiaryByScope(user.userId, true);
+  }
+
+  @ApiOperation({ summary: 'Get external beneficiary' })
+  @Get('external')
+  @UseGuards(JwtAuthGuard)
+  getExternalBeneficiary(@CurrentUser() user: any) {
+    return this.beneficiariesService.getBeneficiaryByScope(user.userId, false);
+  }
 }
