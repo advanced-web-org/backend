@@ -62,5 +62,5 @@ export class AccountsController {
 
 export interface ExternalAccountResponseDto {
   account_number: string;
-  fullename: string;
+  fullname: string;
 }
