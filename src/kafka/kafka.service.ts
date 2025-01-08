@@ -8,15 +8,15 @@ export class KafkaService implements OnModuleDestroy {
   private consumers: Consumer[] = [];
 
   constructor() {
-    this.kafka = new Kafka({
-      clientId: 'nestjs-app',
-      brokers: ['localhost:9092'],
-    });
-    this.producer = this.kafka.producer();
+    // this.kafka = new Kafka({
+    //   clientId: 'nestjs-app',
+    //   brokers: ['localhost:9092'],
+    // });
+    // this.producer = this.kafka.producer();
   }
 
   async onModuleInit() {
-    await this.producer.connect();
+    // await this.producer.connect();
   }
 
   async produce<Type>(topic: string, message: Type) {
@@ -27,16 +27,16 @@ export class KafkaService implements OnModuleDestroy {
   }
 
   async consume<Type>(topic: string, groupId: string, callback: (message: Type) => void) {
-    const consumer = this.kafka.consumer({ groupId });
-    await consumer.connect();
-    await consumer.subscribe({ topic, fromBeginning: false });
-    consumer.run({
-      eachMessage: async ({ topic, partition, message }) => {
-        const parsedMessage = message.value ? JSON.parse(message.value.toString()) : null;
-        callback(parsedMessage);
-      },
-    });
-    this.consumers.push(consumer);
+    // const consumer = this.kafka.consumer({ groupId });
+    // await consumer.connect();
+    // await consumer.subscribe({ topic, fromBeginning: false });
+    // consumer.run({
+    //   eachMessage: async ({ topic, partition, message }) => {
+    //     const parsedMessage = message.value ? JSON.parse(message.value.toString()) : null;
+    //     callback(parsedMessage);
+    //   },
+    // });
+    // this.consumers.push(consumer);
   }
 
   async onModuleDestroy() {
