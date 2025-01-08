@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class HeaderDto {
   @ApiProperty({ description: 'Hash method used' })
@@ -29,7 +29,6 @@ export class InboundRequestDto {
   integrity: string;
 
   @ApiProperty({ description: 'Signature of the request' })
-  @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   signature: string;
 }
