@@ -340,8 +340,8 @@ export class AuthService {
         fullname: user.full_name,
         email: user.email,
         username: user.phone || user.username,
-        account_number: account.account_number ?? null,
-        account_balance: account.account_balance ?? null,
+        account_number: account?.account_number ?? null,
+        account_balance: account?.account_balance ?? null,
       },
     };
   }

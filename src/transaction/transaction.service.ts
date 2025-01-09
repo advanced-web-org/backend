@@ -160,6 +160,7 @@ export class TransactionService {
   }
 
   async findAll(bankId: number, accountNumber: string) {
+
     const sendTransactions = await this.findSent(bankId, accountNumber);
     const receivedTransactions = await this.findReceived(bankId, accountNumber);
 
@@ -189,6 +190,15 @@ export class TransactionService {
     });
 
     return transactions;
+  }
+
+  findDeposit(bankId: number, accountNumber: string): any {
+    return this.prisma.transaction.findMany({
+      where: {
+        to_account_number: accountNumber,
+        transaction_type: 'deposit',
+      },
+    });
   }
 
   async findDebtPaid(bankId: number, accountNumber: string) {
@@ -439,7 +449,6 @@ export class TransactionService {
       fromBank.bank_name ?? '',
     );
 
-
     const { encryptedPayload, hashedPayload, signature } =
       this.createSecureRequest(requestPayload, toBank.bank_name ?? '');
 
@@ -515,10 +524,7 @@ export class TransactionService {
       JSON.stringify(requestPayload),
       toBankCode,
     );
-    const hashedPayload = this.rsaService.hashData(
-      encryptedPayload,
-      'sha256',
-    );
+    const hashedPayload = this.rsaService.hashData(encryptedPayload, 'sha256');
     const signature = this.rsaService.createSignature(
       encryptedPayload,
       'sha256',
@@ -576,7 +582,7 @@ export class TransactionService {
   ) {
     await this.prisma.$transaction(async (transactionalPrisma) => {
       for (const update of balanceUpdates) {
-        console.log('UPDATE: ', update)
+        console.log('UPDATE: ', update);
         await transactionalPrisma.account.update({
           where: { account_number: update.accountNumber },
           data: {

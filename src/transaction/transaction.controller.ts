@@ -1,3 +1,4 @@
+import { AccountsService } from 'src/accounts/accounts.service';
 import {
   Controller,
   Get,
@@ -8,6 +9,7 @@ import {
   Delete,
   Query,
   UseGuards,
+  Logger,
 } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import {
@@ -22,7 +24,10 @@ import { CurrentUser } from 'src/auth/decorators/user.decorator';
 @ApiTags('Transactions API')
 @Controller('transactions')
 export class TransactionController {
-  constructor(private readonly transactionService: TransactionService) {}
+  constructor(
+    private readonly transactionService: TransactionService,
+    private readonly accountsService: AccountsService,
+  ) {}
 
   @ApiOperation({ summary: 'Create a transaction' })
   @Post()
@@ -30,12 +35,21 @@ export class TransactionController {
     return `This action creates a new transaction`;
   }
 
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get all transactions' })
   @Get()
-  async findAllByCustomer(@Query('type') type: string = 'all') {
+  async findAllByCustomer(
+    @Query('type') type: string = 'all',
+    @CurrentUser() user: any,
+  ) {
     // get the bankId and accountNumber from the auth token
     const bankId = 1;
-    const accountNumber = 'A12345';
+
+    const account = await this.accountsService.findOneByCustomerId(user.userId);
+    if (!account) {
+      return [];
+    }
+    const accountNumber = account.account_number;
 
     const typeMethodMap: Record<string, () => any> = {
       received: async () =>
@@ -161,9 +175,11 @@ export class TransactionController {
       fee_payer: 'from',
       fee_amount: 10,
     };
-  
+
     try {
-      await this.transactionService.makeOutboundTransaction(internalTransactionPayload);
+      await this.transactionService.makeOutboundTransaction(
+        internalTransactionPayload,
+      );
       console.log('Outbound transaction successful');
     } catch (error) {
       console.error('Error making outbound transaction:', error);
