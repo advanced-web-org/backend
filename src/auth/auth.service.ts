@@ -148,7 +148,7 @@ export class AuthService {
   async login(payload: LoginDto) {
     const { username } = payload;
     let user: IUser;
-    if (username.includes('staff')) {
+    if (username.includes('staff') || username.includes('admin')) {
       const res = await this.staffsService.getStaffByUserName(username);
 
       if (!res) {
@@ -161,6 +161,8 @@ export class AuthService {
         fullName: res.full_name ? res.full_name : '',
         role: res.role == 'admin' ? Role.ADMIN : Role.EMPLOYEE,
       };
+
+      console.log('USER', user);
     } else {
       const res = await this.customersService.getCustomerByPhone(username);
 
@@ -266,7 +268,7 @@ export class AuthService {
   }
 
   async updateRefreshToken(username: string, refreshToken: string) {
-    if (username.includes('staff')) {
+    if (username.includes('staff') || username.includes('admin')) {
       await this.staffsService.updateStaff(username, {
         refresh_token: refreshToken,
       });
